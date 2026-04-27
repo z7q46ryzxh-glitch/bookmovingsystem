@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Move Inventory Pro</title>
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
+<style>
+  :root {
+    --navy:       #1a2e5a;
+    --blue:       #2352a0;
+    --blue-light: #3a6fd8;
+    --success:    #1d8a4e;
+    --success-bg: #eafaf1;
+    --danger:     #c0392b;
+    --danger-bg:  #fdf0ef;
+    --warn-bg:    #fff8e6;
+    --bg:         #f0f2f7;
+    --surface:    #ffffff;
+    --border:     #dde2ed;
+    --text:       #1a2035;
+    --muted:      #6b7592;
+    --mono:       'DM Mono', monospace;
+    --sans:       'DM Sans', sans-serif;
+    --radius:     12px;
+    --radius-sm:  8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    padding: 16px;
+    max-width: 480px;
+    margin: 0 auto;
+    padding-bottom: 40px;
+  }
+
+  .app-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1.5px solid var(--border);
+  }
+  .app-header h1 { font-size: 20px; font-weight: 600; color: var(--navy); letter-spacing: -0.3px; }
+  .app-header .icon { font-size: 22px; }
+
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  #activeBox {
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--muted);
+    padding: 8px 10px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px;
+  }
+  #activeBox.locked {
+    color: var(--success);
+    background: var(--success-bg);
+    font-weight: 500;
+    border: 1px solid #a8dfc0;
+  }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    padding: 11px 14px;
+    border-radius: var(--radius-sm);
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    margin-bottom: 7px;
+  }
+  .btn:active { transform: scale(0.98); opacity: 0.85; }
+  .btn-primary   { background: var(--blue); color: #fff; }
+  .btn-secondary { background: var(--bg); color: var(--navy); border: 1px solid var(--border); }
+  .btn-danger    { background: var(--danger-bg); color: var(--danger); border: 1px solid #f5c0bb; }
+  .btn-stop      { background: #2c2c2c; color: #fff; }
+  .btn-sm        { padding: 7px 12px; font-size: 13px; margin-bottom: 0; }
+  .btn-row       { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    font-family: var(--sans);
+    font-size: 15px;
+    background: var(--bg);
+    color: var(--text);
+    margin-bottom: 8px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus { border-color: var(--blue-light); background: #fff; }
+
+  #reader { width: 100%; border-radius: var(--radius-sm); overflow: hidden; }
+
+  #scanStatus {
+    font-size: 13px;
+    color: var(--muted);
+    min-height: 18px;
+    margin: 6px 0 4px;
+    font-family: var(--mono);
+  }
+  #scanStatus.ok   { color: var(--success); }
+  #scanStatus.err  { color: var(--danger); }
+  #scanStatus.warn { color: #a07000; }
+
+  #lastScanned {
+    display: none;
+    background: var(--success-bg);
+    border: 1px solid #a8dfc0;
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-top: 8px;
+    font-size: 14px;
+  }
+  #lastScanned .book-title { font-weight: 600; font-size: 15px; margin-bottom: 2px; }
+  #lastScanned .book-meta  { color: var(--muted); font-size: 13px; }
+
+  /* Not-found panel */
+  #notFoundPanel {
+    display: none;
+    background: var(--warn-bg);
+    border: 1px solid #f0c040;
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    margin-top: 8px;
+  }
+  #notFoundPanel .panel-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: #7a5800;
+  }
+
+  /* Title search results */
+  .search-result-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .search-result-btn:hover  { border-color: var(--blue-light); background: #f0f5ff; }
+  .search-result-btn:active { background: #e0ecff; }
+  .srb-title  { font-weight: 600; font-size: 14px; color: var(--text); }
+  .srb-author { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .srb-isbn   { font-size: 11px; color: var(--blue); font-family: var(--mono); margin-top: 2px; }
+
+  /* Divider */
+  .or-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .or-divider::before, .or-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Recent list */
+  #recentList { margin-top: 10px; display: none; }
+  #recentList .recent-item {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  #recentList .recent-item:last-child { border-bottom: none; }
+  #recentList .recent-title { font-weight: 600; }
+  #recentList .recent-meta  { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+
+  /* ISBN row */
+  .isbn-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    margin-top: 4px;
+  }
+  .isbn-row input { margin-bottom: 0; }
+
+  /* Search results */
+  #searchResults .result-item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  #searchResults .result-item:last-child { border-bottom: none; }
+  #searchResults .result-title  { font-weight: 600; }
+  #searchResults .result-author { color: var(--muted); font-size: 13px; }
+  #searchResults .result-box {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    margin-top: 3px;
+    color: var(--blue);
+  }
+  .empty-msg { color: var(--muted); font-size: 13px; font-style: italic; }
+
+  /* Stats */
+  .stat-total {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--navy);
+    font-family: var(--mono);
+    margin-bottom: 12px;
+  }
+  .stat-total span { font-size: 14px; font-weight: 400; color: var(--muted); margin-left: 4px; }
+  .box-stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .box-stat-row:last-child { border-bottom: none; }
+  .box-stat-id    { font-family: var(--mono); color: var(--blue); }
+  .box-stat-count { font-weight: 600; }
+
+  #qr { display: block; margin: 10px 0; border-radius: var(--radius-sm); }
+
+  #toast {
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--navy);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 99px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 999;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <span class="icon">📦</span>
+  <h1>Move Inventory Pro</h1>
+</div>
+
+<!-- ACTIVE BOX -->
+<div class="card">
+  <div class="card-title">Active Box</div>
+  <div id="activeBox">No box selected</div>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="scanBox()">📷 Scan Box</button>
+    <button class="btn btn-danger"  onclick="unlockBox()">🔓 Unlock</button>
+  </div>
+</div>
+
+<!-- BOOK SCANNER -->
+<div class="card">
+  <div class="card-title">Scan Books</div>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="startScan()">📚 Start Scan</button>
+    <button class="btn btn-stop"    onclick="stopScan()">⏹ Stop</button>
+  </div>
+
+  <div class="isbn-row">
+    <input type="number" id="manualIsbn" placeholder="Or enter ISBN manually" />
+    <button class="btn btn-secondary" style="width:auto;padding:10px 14px;margin:0;" onclick="submitManualIsbn()">→</button>
+  </div>
+
+  <div id="scanStatus"></div>
+  <div id="reader"></div>
+  <div id="lastScanned"></div>
+
+  <!-- Not found panel -->
+  <div id="notFoundPanel">
+    <div class="panel-title">📖 Book not found — search by title</div>
+
+    <!-- Title search -->
+    <div class="isbn-row" style="margin-bottom:8px;">
+      <input type="text" id="titleSearchInput" placeholder="Type title or author..." style="margin-bottom:0;" />
+      <button class="btn btn-primary btn-sm" style="width:auto;" onclick="searchByTitle()">Search</button>
+    </div>
+    <div id="titleSearchResults"></div>
+
+    <div class="or-divider">or enter manually</div>
+
+    <!-- Manual fallback -->
+    <input type="text" id="manualTitle"       placeholder="Title" />
+    <input type="text" id="manualAuthor"      placeholder="Author" />
+    <input type="text" id="manualIsbnConfirm" placeholder="ISBN" />
+    <div class="btn-row">
+      <button class="btn btn-primary"   onclick="submitManualEntry()">💾 Save</button>
+      <button class="btn btn-secondary" onclick="dismissNotFound()">✕ Skip</button>
+    </div>
+  </div>
+
+  <div id="recentList"></div>
+</div>
+
+<!-- SEARCH -->
+<div class="card">
+  <div class="card-title">Search Books</div>
+  <input type="text" id="searchInput" placeholder="Title or author..." />
+  <button class="btn btn-primary" onclick="searchBooks()">🔍 Search</button>
+  <div id="searchResults" style="margin-top:8px;"></div>
+</div>
+
+<!-- STATS -->
+<div class="card">
+  <div class="card-title">Stats</div>
+  <div id="stats"><span class="empty-msg">Tap refresh to load.</span></div>
+  <button class="btn btn-secondary" style="margin-top:10px;" onclick="loadStats()">↻ Refresh Stats</button>
+</div>
+
+<!-- QR GENERATOR -->
+<div class="card">
+  <div class="card-title">Generate Box QR Code</div>
+  <input type="text" id="qrCategory" placeholder="Category (e.g. BOOKS)" />
+  <input type="text" id="qrNumber"   placeholder="Box Number (e.g. 3)" />
+  <button class="btn btn-primary" onclick="makeQR()">Generate QR</button>
+  <canvas id="qr"></canvas>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ================================================
+   CONFIG
+================================================ */
+const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbxPQH2qqlZHmiqKZX6I4f08OQtq6h_hiVLtM5yAmOuMjD5eYWN8AUN35VSZ9At5ZrQOcA/exec";
+const FETCH_TIMEOUT_MS = 6000;
+const SCAN_COOLDOWN_MS = 1500;
+const MAX_RECENT       = 8;
+
+/* ================================================
+   STATE
+================================================ */
+let scanner         = null;
+let activeBox       = "";
+let activeCategory  = "";
+let activeBoxNumber = "";
+let scanLock        = false;
+let recentScans     = [];
+let pendingIsbn     = "";   // ISBN held while user searches by title
+
+/* ================================================
+   FEEDBACK
+================================================ */
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    osc.connect(ctx.destination);
+    osc.start();
+    setTimeout(() => osc.stop(), 80);
+  } catch {}
+}
+function vibrate() { if (navigator.vibrate) navigator.vibrate(80); }
+
+let toastTimer = null;
+function showToast(msg, duration) {
+  duration = duration || 2200;
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.display = "block";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.display = "none"; }, duration);
+}
+
+function setStatus(msg, type) {
+  type = type || "";
+  const el = document.getElementById("scanStatus");
+  el.textContent = msg;
+  el.className = type;
+}
+
+/* ================================================
+   CAMERA
+================================================ */
+async function getCamera() {
+  const devices = await Html5Qrcode.getCameras();
+  if (!devices || devices.length === 0) throw new Error("No camera found");
+  return devices.find(d =>
+    (d.label || "").toLowerCase().includes("back")  ||
+    (d.label || "").toLowerCase().includes("rear")  ||
+    (d.label || "").toLowerCase().includes("environment")
+  ) || devices[0];
+}
+
+/* ================================================
+   STOP SCANNER
+================================================ */
+function stopScan() {
+  try {
+    if (scanner) {
+      scanner.stop().catch(() => {});
+      scanner.clear().catch(() => {});
+      scanner = null;
+    }
+    document.getElementById("reader").innerHTML = "";
+    scanLock = false;
+    setStatus("");
+  } catch {}
+}
+
+/* ================================================
+   BOX SCAN
+================================================ */
+async function scanBox() {
+  try {
+    stopScan();
+    await pause(200);
+    setStatus("Point at box QR code...");
+    scanner = new Html5Qrcode("reader");
+    const camera = await getCamera();
+    await scanner.start(
+      camera.id,
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      (text) => {
+        activeBox       = text.trim();
+        const parts     = activeBox.split("-");
+        activeCategory  = parts[0] || "";
+        activeBoxNumber = parts[1] || "";
+        const el = document.getElementById("activeBox");
+        el.textContent = activeCategory + " — Box " + activeBoxNumber;
+        el.className = "locked";
+        beep(); vibrate();
+        setStatus("Box locked. Ready to scan books.", "ok");
+        stopScan();
+      }
+    );
+  } catch (err) {
+    setStatus("Box scan failed: " + (err.message || err), "err");
+  }
+}
+
+/* ================================================
+   BOOK SCAN
+================================================ */
+async function startScan() {
+  if (!activeBox) { showToast("Scan a box first"); return; }
+  try {
+    stopScan();
+    await pause(250);
+    setStatus("Scanning — point at barcode...");
+    scanner = new Html5Qrcode("reader");
+    const camera = await getCamera();
+    await scanner.start(
+      camera.id,
+      { fps: 10, qrbox: { width: 300, height: 150 }, aspectRatio: 1.5 },
+      async (text) => {
+        const match = text.match(/(\d{10}|\d{13})/);
+        if (!match || scanLock) return;
+        scanLock = true;
+        beep(); vibrate();
+        await processIsbn(match[0]);
+        if (document.getElementById("notFoundPanel").style.display === "none" ||
+            !document.getElementById("notFoundPanel").style.display) {
+          await pause(SCAN_COOLDOWN_MS);
+          scanLock = false;
+          setStatus("Ready — scan next book.");
+        }
+      }
+    );
+  } catch (err) {
+    setStatus("Scan failed: " + (err.message || err), "err");
+  }
+}
+
+/* ================================================
+   MANUAL ISBN
+================================================ */
+async function submitManualIsbn() {
+  const raw = document.getElementById("manualIsbn").value.trim().replace(/\D/g, "");
+  if (!raw)       { showToast("Enter an ISBN first"); return; }
+  if (!activeBox) { showToast("Scan a box first"); return; }
+  if (scanLock)   return;
+  scanLock = true;
+  document.getElementById("manualIsbn").value = "";
+  await processIsbn(raw);
+  if (document.getElementById("notFoundPanel").style.display === "none" ||
+      !document.getElementById("notFoundPanel").style.display) {
+    scanLock = false;
+  }
+}
+
+/* ================================================
+   PROCESS ISBN
+================================================ */
+async function processIsbn(isbn) {
+  setStatus("Looking up ISBN " + isbn + "...");
+
+  const book = await fetchBook(isbn);
+
+  if (!book) {
+    pendingIsbn = isbn;
+    setStatus("Not found — search by title below.", "warn");
+    document.getElementById("notFoundPanel").style.display = "block";
+    document.getElementById("manualIsbnConfirm").value = isbn;
+    document.getElementById("titleSearchInput").value  = "";
+    document.getElementById("titleSearchResults").innerHTML = "";
+    document.getElementById("manualTitle").value  = "";
+    document.getElementById("manualAuthor").value = "";
+    document.getElementById("titleSearchInput").focus();
+    return;
+  }
+
+  await saveBook(book.isbn, book.title, book.author, "", book.source);
+}
+
+/* ================================================
+   TITLE SEARCH (via Apps Script -> Google Books)
+================================================ */
+async function searchByTitle() {
+  const q   = document.getElementById("titleSearchInput").value.trim();
+  const out = document.getElementById("titleSearchResults");
+  if (!q) { showToast("Enter a title or author to search"); return; }
+
+  out.innerHTML = "<div class='empty-msg'>Searching...</div>";
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(
+      SCRIPT_URL + "?query=" + encodeURIComponent(q),
+      { signal: controller.signal }
+    );
+    clearTimeout(timer);
+    const data = await res.json();
+
+    if (!data.ok || !data.results || data.results.length === 0) {
+      out.innerHTML = "<div class='empty-msg'>No results found. Try a different search.</div>";
+      return;
+    }
+
+    out.innerHTML = data.results.map((b, i) =>
+      "<button class='search-result-btn' onclick='selectTitleResult(" + i + ")'>" +
+        "<div class='srb-title'>"  + b.title  + "</div>" +
+        "<div class='srb-author'>" + b.author + "</div>" +
+        (b.isbn ? "<div class='srb-isbn'>ISBN " + b.isbn + "</div>" : "") +
+      "</button>"
+    ).join("");
+
+    // Store results for selection
+    window._titleResults = data.results;
+
+  } catch (err) {
+    out.innerHTML = "<div class='empty-msg' style='color:var(--danger);'>Search failed. Check your connection.</div>";
+  }
+}
+
+function selectTitleResult(index) {
+  const book = window._titleResults[index];
+  if (!book) return;
+  saveBook(
+    book.isbn || pendingIsbn,
+    book.title,
+    book.author,
+    "",
+    "Google Books (title search)"
+  );
+  dismissNotFound();
+}
+
+/* ================================================
+   MANUAL ENTRY FALLBACK
+================================================ */
+async function submitManualEntry() {
+  const title  = document.getElementById("manualTitle").value.trim();
+  const author = document.getElementById("manualAuthor").value.trim();
+  const isbn   = document.getElementById("manualIsbnConfirm").value.trim();
+  if (!title)     { showToast("Please enter a title"); return; }
+  if (!activeBox) { showToast("No active box selected"); return; }
+  await saveBook(isbn || pendingIsbn, title, author || "Unknown Author", "manually entered", "manual");
+  dismissNotFound();
+}
+
+function dismissNotFound() {
+  document.getElementById("notFoundPanel").style.display = "none";
+  document.getElementById("titleSearchInput").value      = "";
+  document.getElementById("titleSearchResults").innerHTML = "";
+  document.getElementById("manualTitle").value           = "";
+  document.getElementById("manualAuthor").value          = "";
+  document.getElementById("manualIsbnConfirm").value     = "";
+  pendingIsbn = "";
+  scanLock    = false;
+  setStatus("Ready — scan next book.");
+}
+
+/* ================================================
+   SAVE BOOK
+================================================ */
+async function saveBook(isbn, title, author, notes, source) {
+  setStatus("Saving to sheet...");
+  const result = await sendToSheet({
+    boxId:     activeBox,
+    category:  activeCategory,
+    boxNumber: activeBoxNumber,
+    isbn:      isbn   || "",
+    title:     title  || "",
+    author:    author || "",
+    notes:     notes  || ""
+  });
+
+  if (!result.ok) {
+    setStatus("Save failed: " + (result.error || "unknown"), "err");
+    showToast("Save failed");
+    return;
+  }
+
+  const ls = document.getElementById("lastScanned");
+  ls.style.display = "block";
+  ls.innerHTML =
+    "<div class='book-title'>✅ " + title + "</div>" +
+    "<div class='book-meta'>" + author + " &nbsp;·&nbsp; ISBN " + isbn + "</div>" +
+    (source ? "<div class='book-meta' style='font-size:11px;margin-top:3px;opacity:0.7;'>via " + source + "</div>" : "");
+
+  recentScans.unshift({ title: title, author: author, boxId: activeBox, isbn: isbn });
+  if (recentScans.length > MAX_RECENT) recentScans.pop();
+  renderRecent();
+
+  showToast("✅ Saved!");
+  setStatus("Ready — scan next book.", "ok");
+}
+
+/* ================================================
+   RECENT SCANS
+================================================ */
+function renderRecent() {
+  const el = document.getElementById("recentList");
+  if (recentScans.length === 0) { el.style.display = "none"; return; }
+  el.style.display = "block";
+  el.innerHTML =
+    "<div class='card-title' style='margin-top:12px;'>Recent (this session)</div>" +
+    recentScans.map(b =>
+      "<div class='recent-item'>" +
+        "<div class='recent-title'>" + b.title + "</div>" +
+        "<div class='recent-meta'>" + b.author + " · " + b.boxId + " · " + b.isbn + "</div>" +
+      "</div>"
+    ).join("");
+}
+
+/* ================================================
+   BOOK LOOKUP — ISBN via Apps Script
+================================================ */
+async function fetchBook(isbn) {
+  // Source 1: Apps Script (Google Books + Open Library chain)
+  setStatus("Looking up ISBN " + isbn + "...");
+  try {
+    const c1 = new AbortController();
+    const t1 = setTimeout(() => c1.abort(), FETCH_TIMEOUT_MS);
+    const r1 = await fetch(SCRIPT_URL + "?isbn=" + isbn, { signal: c1.signal });
+    clearTimeout(t1);
+    const d1 = await r1.json();
+    if (d1.ok && d1.title) {
+      return { isbn: isbn, title: d1.title, author: d1.author, source: d1.source };
+    }
+  } catch(e1) {}
+
+  // Source 2: Open Library direct (in case Apps Script is slow)
+  setStatus("Trying Open Library for " + isbn + "...");
+  try {
+    const c2 = new AbortController();
+    const t2 = setTimeout(() => c2.abort(), FETCH_TIMEOUT_MS);
+    const r2 = await fetch(
+      "https://openlibrary.org/search.json?isbn=" + isbn + "&limit=1",
+      { signal: c2.signal }
+    );
+    clearTimeout(t2);
+    const d2 = await r2.json();
+    if (d2.numFound > 0 && d2.docs && d2.docs[0]) {
+      const doc = d2.docs[0];
+      return {
+        isbn:   isbn,
+        title:  doc.title || "Unknown Title",
+        author: doc.author_name ? doc.author_name[0] : "Unknown Author",
+        source: "Open Library"
+      };
+    }
+  } catch(e2) {}
+
+  return null;
+}
+
+/* ================================================
+   SEND TO SHEET
+================================================ */
+async function sendToSheet(data) {
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify(data)
+    });
+    return await res.json();
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+/* ================================================
+   FETCH ALL SHEET DATA
+================================================ */
+async function fetchAllData() {
+  const res  = await fetch(SCRIPT_URL);
+  const json = await res.json();
+  if (Array.isArray(json))                 return json;
+  if (json.ok && Array.isArray(json.data)) return json.data;
+  throw new Error(json.error || "Unexpected response from sheet");
+}
+
+/* ================================================
+   SEARCH
+================================================ */
+async function searchBooks() {
+  const q   = document.getElementById("searchInput").value.toLowerCase().trim();
+  const out = document.getElementById("searchResults");
+  if (!q) { out.innerHTML = "<div class='empty-msg'>Enter a title or author to search.</div>"; return; }
+  out.innerHTML = "<div class='empty-msg'>Searching...</div>";
+  try {
+    const data     = await fetchAllData();
+    const filtered = data.filter(r =>
+      (r.title  || "").toLowerCase().includes(q) ||
+      (r.author || "").toLowerCase().includes(q)
+    );
+    if (filtered.length === 0) {
+      out.innerHTML = "<div class='empty-msg'>No results for \"" + q + "\".</div>";
+      return;
+    }
+    out.innerHTML = filtered.map(r =>
+      "<div class='result-item'>" +
+        "<div class='result-title'>"  + (r.title  || "—") + "</div>" +
+        "<div class='result-author'>" + (r.author || "—") + "</div>" +
+        "<span class='result-box'>📦 " + r.boxId + "</span>" +
+      "</div>"
+    ).join("");
+  } catch (e) {
+    out.innerHTML = "<div class='empty-msg' style='color:var(--danger);'>Search failed. Make sure doGet is deployed in your Google Script.</div>";
+  }
+}
+
+/* ================================================
+   STATS
+================================================ */
+async function loadStats() {
+  const out = document.getElementById("stats");
+  out.innerHTML = "<div class='empty-msg'>Loading...</div>";
+  try {
+    const data  = await fetchAllData();
+    const boxes = {};
+    data.forEach(r => { if (r.boxId) boxes[r.boxId] = (boxes[r.boxId] || 0) + 1; });
+    const boxRows = Object.entries(boxes)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([id, count]) =>
+        "<div class='box-stat-row'>" +
+          "<span class='box-stat-id'>" + id + "</span>" +
+          "<span class='box-stat-count'>" + count + " book" + (count !== 1 ? "s" : "") + "</span>" +
+        "</div>"
+      ).join("");
+    out.innerHTML =
+      "<div class='stat-total'>" + data.length + "<span>total books</span></div>" +
+      (boxRows || "<div class='empty-msg'>No boxes yet.</div>");
+  } catch (e) {
+    out.innerHTML = "<div class='empty-msg' style='color:var(--danger);'>Failed to load stats.</div>";
+  }
+}
+
+/* ================================================
+   QR GENERATOR
+================================================ */
+function makeQR() {
+  const cat = document.getElementById("qrCategory").value.trim().toUpperCase();
+  const num = document.getElementById("qrNumber").value.trim();
+  if (!cat || !num) { showToast("Enter category and box number"); return; }
+  const value = cat + "-" + num;
+  QRCode.toCanvas(document.getElementById("qr"), value, { width: 220 });
+  showToast("QR for " + value + " generated");
+}
+
+/* ================================================
+   UNLOCK BOX
+================================================ */
+function unlockBox() {
+  activeBox = ""; activeCategory = ""; activeBoxNumber = "";
+  const el = document.getElementById("activeBox");
+  el.textContent = "No box selected";
+  el.className = "";
+  setStatus("");
+  document.getElementById("lastScanned").style.display = "none";
+  showToast("Box unlocked");
+}
+
+/* ================================================
+   UTIL
+================================================ */
+function pause(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ================================================
+   KEYBOARD SHORTCUTS
+================================================ */
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("manualIsbn").addEventListener("keydown", e => {
+    if (e.key === "Enter") submitManualIsbn();
+  });
+  document.getElementById("searchInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") searchBooks();
+  });
+  document.getElementById("titleSearchInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") searchByTitle();
+  });
+  document.getElementById("manualTitle").addEventListener("keydown", e => {
+    if (e.key === "Enter") document.getElementById("manualAuthor").focus();
+  });
+  document.getElementById("manualAuthor").addEventListener("keydown", e => {
+    if (e.key === "Enter") submitManualEntry();
+  });
+});
+</script>
+
+</body>
+</html>
