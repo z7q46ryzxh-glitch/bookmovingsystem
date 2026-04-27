@@ -733,12 +733,13 @@ async function fetchBook(isbn) {
 ================================================ */
 async function sendToSheet(data) {
   try {
-    const res = await fetch(SCRIPT_URL, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify(data)
+    await fetch(SCRIPT_URL, {
+      method:   "POST",
+      mode:     "no-cors",
+      headers:  { "Content-Type": "text/plain" },
+      body:     JSON.stringify(data)
     });
-    return await res.json();
+    return { ok: true };
   } catch (e) {
     return { ok: false, error: e.message };
   }
