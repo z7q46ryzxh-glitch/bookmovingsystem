@@ -496,8 +496,9 @@ async function startScan() {
       camera.id,
       { fps: 10, qrbox: { width: 300, height: 150 }, aspectRatio: 1.5 },
       async (text) => {
-        const match = text.match(/(\d{10}|\d{13})/);
+        const match = text.match(/(\d{13})/);
         if (!match || scanLock) return;
+        if (!match[0].startsWith("978") && !match[0].startsWith("979")) return;
         scanLock = true;
         beep(); vibrate();
         await processIsbn(match[0]);
