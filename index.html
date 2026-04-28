@@ -266,6 +266,101 @@
 
   #qr { display: block; margin: 10px 0; border-radius: var(--radius-sm); }
 
+  /* QR Generator */
+  .field-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 10px 0 5px;
+  }
+  .field-select {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    font-family: var(--sans);
+    font-size: 15px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+  }
+  .dropdown-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 6px;
+    align-items: center;
+  }
+  .bin-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 6px;
+    align-items: center;
+  }
+  .btn-icon {
+    width: auto;
+    padding: 10px 14px;
+    margin: 0;
+    font-size: 16px;
+    line-height: 1;
+  }
+  .qr-label {
+    background: #fff;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .qr-label-text {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--navy);
+    text-align: center;
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+  }
+  .qr-label-text .label-room     { font-size: 13px; color: var(--muted); display: block; }
+  .qr-label-text .label-category { font-size: 13px; color: var(--muted); display: block; }
+  .qr-label-text .label-bin      { font-size: 24px; color: var(--navy); display: block; margin-top: 2px; }
+
+  .recent-qr-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .recent-qr-item:last-child { border-bottom: none; }
+  .recent-qr-label { font-family: var(--mono); color: var(--blue); font-weight: 600; }
+  .recent-qr-reprint {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-family: var(--sans);
+    cursor: pointer;
+    color: var(--navy);
+  }
+
+  @media print {
+    body > *:not(#printArea) { display: none !important; }
+    #printArea {
+      display: flex !important;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+  }
+
   #toast {
     display: none;
     position: fixed;
@@ -362,10 +457,62 @@
 <!-- QR GENERATOR -->
 <div class="card">
   <div class="card-title">Generate Box QR Code</div>
-  <input type="text" id="qrCategory" placeholder="Category (e.g. BOOKS)" />
-  <input type="text" id="qrNumber"   placeholder="Box Number (e.g. 3)" />
-  <button class="btn btn-primary" onclick="makeQR()">Generate QR</button>
-  <canvas id="qr"></canvas>
+
+  <!-- Room -->
+  <label class="field-label">Room</label>
+  <div class="dropdown-row">
+    <select id="qrRoom" class="field-select"></select>
+    <button class="btn btn-secondary btn-icon" onclick="showAddItem('room')" title="Add room">+</button>
+    <button class="btn btn-danger btn-icon"    onclick="removeItem('room')"  title="Remove selected">✕</button>
+  </div>
+
+  <!-- Category -->
+  <label class="field-label">Category</label>
+  <div class="dropdown-row">
+    <select id="qrCat" class="field-select"></select>
+    <button class="btn btn-secondary btn-icon" onclick="showAddItem('category')" title="Add category">+</button>
+    <button class="btn btn-danger btn-icon"    onclick="removeItem('category')"  title="Remove selected">✕</button>
+  </div>
+
+  <!-- Bin number -->
+  <label class="field-label">Bin #</label>
+  <div class="bin-row">
+    <button class="btn btn-secondary btn-icon" onclick="changeBin(-1)">−</button>
+    <input type="number" id="qrBin" value="1" min="1" style="text-align:center;margin:0;" />
+    <button class="btn btn-secondary btn-icon" onclick="changeBin(1)">+</button>
+  </div>
+
+  <button class="btn btn-primary" style="margin-top:10px;" onclick="makeQR()">Generate QR Code</button>
+
+  <!-- Label preview -->
+  <div id="qrPreview" style="display:none;">
+    <div class="qr-label">
+      <canvas id="qr"></canvas>
+      <div id="qrLabelText" class="qr-label-text"></div>
+    </div>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="btn btn-secondary" onclick="printQR()">🖨️ Print Label</button>
+      <button class="btn btn-primary"   onclick="makeQRNext()">Next Bin →</button>
+    </div>
+  </div>
+
+  <!-- Recent labels -->
+  <div id="recentQR" style="display:none;margin-top:14px;">
+    <div class="card-title">Recently Generated</div>
+    <div id="recentQRList"></div>
+  </div>
+</div>
+
+<!-- Add item modal -->
+<div id="addItemModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:var(--radius);padding:20px;margin:20px;width:100%;max-width:340px;">
+    <div id="addItemTitle" style="font-weight:600;margin-bottom:12px;"></div>
+    <input type="text" id="addItemInput" placeholder="Enter name..." />
+    <div class="btn-row">
+      <button class="btn btn-primary"   onclick="confirmAddItem()">Add</button>
+      <button class="btn btn-secondary" onclick="hideAddItem()">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -374,7 +521,7 @@
 /* ================================================
    CONFIG
 ================================================ */
-const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbxwM2JOmI0qGrl3RcUS1K6eMbfukSsqZ0wu89VBx669fceAlLS-HlbwuzR2Cz272onPlA/exec";
+const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbzjtrxtolzSyADijsemxKpyC8x9azHoqF-uw3SOIzqm-Eut-oKNBj0c56BGgAYIAyQvGQ/exec";
 const FETCH_TIMEOUT_MS = 6000;
 const SCAN_COOLDOWN_MS = 1500;
 const MAX_RECENT       = 8;
@@ -496,9 +643,8 @@ async function startScan() {
       camera.id,
       { fps: 10, qrbox: { width: 300, height: 150 }, aspectRatio: 1.5 },
       async (text) => {
-        const match = text.match(/(\d{13})/);
+        const match = text.match(/(\d{10}|\d{13})/);
         if (!match || scanLock) return;
-        if (!match[0].startsWith("978") && !match[0].startsWith("979")) return;
         scanLock = true;
         beep(); vibrate();
         await processIsbn(match[0]);
@@ -652,7 +798,9 @@ async function saveBook(isbn, title, author, notes, source) {
 
   if (!result.ok) {
     setStatus("Save failed: " + (result.error || "unknown"), "err");
-    showToast("Save failed");  }
+    showToast("Save failed");
+    return;
+  }
 
   const ls = document.getElementById("lastScanned");
   ls.style.display = "block";
@@ -690,8 +838,7 @@ function renderRecent() {
    BOOK LOOKUP — ISBN via Apps Script
 ================================================ */
 async function fetchBook(isbn) {
-
-  // Source 1: Apps Script (Open Library chain)
+  // Source 1: Apps Script (Google Books + Open Library chain)
   setStatus("Looking up ISBN " + isbn + "...");
   try {
     const c1 = new AbortController();
@@ -704,8 +851,8 @@ async function fetchBook(isbn) {
     }
   } catch(e1) {}
 
-  // Source 2: Open Library search directly from browser
-  setStatus("Trying Open Library search for " + isbn + "...");
+  // Source 2: Open Library direct (in case Apps Script is slow)
+  setStatus("Trying Open Library for " + isbn + "...");
   try {
     const c2 = new AbortController();
     const t2 = setTimeout(() => c2.abort(), FETCH_TIMEOUT_MS);
@@ -726,47 +873,20 @@ async function fetchBook(isbn) {
     }
   } catch(e2) {}
 
-  // Source 3: Open Library ISBN API directly from browser  
-  setStatus("Trying Open Library ISBN API for " + isbn + "...");
-  try {
-    const c3 = new AbortController();
-    const t3 = setTimeout(() => c3.abort(), FETCH_TIMEOUT_MS);
-    const r3 = await fetch(
-      "https://openlibrary.org/isbn/" + isbn + ".json",
-      { signal: c3.signal }
-    );
-    clearTimeout(t3);
-    if (r3.ok) {
-      const d3 = await r3.json();
-      if (d3.title) {
-        // Fetch author separately if available
-        let author = "Unknown Author";
-        if (d3.authors && d3.authors[0] && d3.authors[0].key) {
-          try {
-            const ar = await fetch("https://openlibrary.org" + d3.authors[0].key + ".json");
-            const ad = await ar.json();
-            author = ad.name || ad.personal_name || "Unknown Author";
-          } catch {}
-        }
-        return { isbn: isbn, title: d3.title, author: author, source: "Open Library ISBN" };
-      }
-    }
-  } catch(e3) {}
-
   return null;
 }
+
 /* ================================================
    SEND TO SHEET
 ================================================ */
 async function sendToSheet(data) {
   try {
-    await fetch(SCRIPT_URL, {
-      method:   "POST",
-      mode:     "no-cors",
-      headers:  { "Content-Type": "text/plain" },
-      body:     JSON.stringify(data)
+    const res = await fetch(SCRIPT_URL, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify(data)
     });
-    return { ok: true };
+    return await res.json();
   } catch (e) {
     return { ok: false, error: e.message };
   }
@@ -840,15 +960,193 @@ async function loadStats() {
 }
 
 /* ================================================
-   QR GENERATOR
+   QR GENERATOR — rooms, categories, bin#, print, history
 ================================================ */
+
+const QR_DEFAULTS = {
+  rooms:      ["Storage", "Donation", "Master Bedroom"],
+  categories: ["Books"]
+};
+const QR_RECENT_MAX = 5;
+
+let qrRooms      = [];
+let qrCategories = [];
+let qrRecentList = [];
+let addItemType  = "";  // "room" or "category"
+
+function loadQRLists() {
+  try {
+    qrRooms      = JSON.parse(localStorage.getItem("qrRooms"))      || QR_DEFAULTS.rooms;
+    qrCategories = JSON.parse(localStorage.getItem("qrCategories")) || QR_DEFAULTS.categories;
+    qrRecentList = JSON.parse(localStorage.getItem("qrRecent"))     || [];
+  } catch {
+    qrRooms      = QR_DEFAULTS.rooms.slice();
+    qrCategories = QR_DEFAULTS.categories.slice();
+    qrRecentList = [];
+  }
+  renderQRDropdowns();
+  renderRecentQR();
+}
+
+function saveQRLists() {
+  localStorage.setItem("qrRooms",      JSON.stringify(qrRooms));
+  localStorage.setItem("qrCategories", JSON.stringify(qrCategories));
+  localStorage.setItem("qrRecent",     JSON.stringify(qrRecentList));
+}
+
+function renderQRDropdowns() {
+  const roomSel = document.getElementById("qrRoom");
+  const catSel  = document.getElementById("qrCat");
+  const roomVal = roomSel.value;
+  const catVal  = catSel.value;
+
+  roomSel.innerHTML = qrRooms.map(r =>
+    "<option value='" + r + "'>" + r + "</option>"
+  ).join("");
+  catSel.innerHTML = qrCategories.map(c =>
+    "<option value='" + c + "'>" + c + "</option>"
+  ).join("");
+
+  if (roomVal) roomSel.value = roomVal;
+  if (catVal)  catSel.value  = catVal;
+}
+
+function showAddItem(type) {
+  addItemType = type;
+  document.getElementById("addItemTitle").textContent =
+    "Add new " + (type === "room" ? "room" : "category");
+  document.getElementById("addItemInput").value = "";
+  document.getElementById("addItemModal").style.display = "flex";
+  setTimeout(() => document.getElementById("addItemInput").focus(), 100);
+}
+
+function hideAddItem() {
+  document.getElementById("addItemModal").style.display = "none";
+  addItemType = "";
+}
+
+function confirmAddItem() {
+  const val = document.getElementById("addItemInput").value.trim();
+  if (!val) { showToast("Enter a name"); return; }
+
+  if (addItemType === "room") {
+    if (!qrRooms.includes(val)) { qrRooms.push(val); }
+    renderQRDropdowns();
+    document.getElementById("qrRoom").value = val;
+  } else {
+    if (!qrCategories.includes(val)) { qrCategories.push(val); }
+    renderQRDropdowns();
+    document.getElementById("qrCat").value = val;
+  }
+
+  saveQRLists();
+  hideAddItem();
+  showToast(val + " added");
+}
+
+function removeItem(type) {
+  if (type === "room") {
+    const val = document.getElementById("qrRoom").value;
+    if (qrRooms.length <= 1) { showToast("Must keep at least one room"); return; }
+    qrRooms = qrRooms.filter(r => r !== val);
+  } else {
+    const val = document.getElementById("qrCat").value;
+    if (qrCategories.length <= 1) { showToast("Must keep at least one category"); return; }
+    qrCategories = qrCategories.filter(c => c !== val);
+  }
+  saveQRLists();
+  renderQRDropdowns();
+  showToast("Removed");
+}
+
+function changeBin(delta) {
+  const el  = document.getElementById("qrBin");
+  const val = parseInt(el.value) || 1;
+  el.value  = Math.max(1, val + delta);
+}
+
+function getQRValue() {
+  const room = document.getElementById("qrRoom").value.trim();
+  const cat  = document.getElementById("qrCat").value.trim().toUpperCase();
+  const bin  = document.getElementById("qrBin").value.trim();
+  return { room, cat, bin, value: room + "-" + cat + "-" + bin };
+}
+
 function makeQR() {
-  const cat = document.getElementById("qrCategory").value.trim().toUpperCase();
-  const num = document.getElementById("qrNumber").value.trim();
-  if (!cat || !num) { showToast("Enter category and box number"); return; }
-  const value = cat + "-" + num;
-  QRCode.toCanvas(document.getElementById("qr"), value, { width: 220 });
-  showToast("QR for " + value + " generated");
+  const { room, cat, bin, value } = getQRValue();
+  if (!room || !cat || !bin) { showToast("Fill in all fields"); return; }
+
+  const preview = document.getElementById("qrPreview");
+  preview.style.display = "block";
+
+  QRCode.toCanvas(document.getElementById("qr"), value, { width: 220 }, () => {
+    document.getElementById("qrLabelText").innerHTML =
+      "<span class='label-room'>"     + room + "</span>" +
+      "<span class='label-category'>" + cat  + "</span>" +
+      "<span class='label-bin'>Bin "  + bin  + "</span>";
+  });
+
+  // Add to recent
+  qrRecentList = qrRecentList.filter(r => r.value !== value);
+  qrRecentList.unshift({ room, cat, bin, value });
+  if (qrRecentList.length > QR_RECENT_MAX) qrRecentList.pop();
+  saveQRLists();
+  renderRecentQR();
+
+  showToast("QR generated for " + value);
+}
+
+function makeQRNext() {
+  changeBin(1);
+  makeQR();
+}
+
+function renderRecentQR() {
+  const el = document.getElementById("recentQR");
+  if (qrRecentList.length === 0) { el.style.display = "none"; return; }
+
+  el.style.display = "block";
+  document.getElementById("recentQRList").innerHTML = qrRecentList.map((r, i) =>
+    "<div class='recent-qr-item'>" +
+      "<span class='recent-qr-label'>" + r.value + "</span>" +
+      "<button class='recent-qr-reprint' onclick='reprintQR(" + i + ")'>Reprint</button>" +
+    "</div>"
+  ).join("");
+}
+
+function reprintQR(index) {
+  const r = qrRecentList[index];
+  if (!r) return;
+
+  document.getElementById("qrRoom").value = r.room;
+  document.getElementById("qrCat").value  = r.cat;
+  document.getElementById("qrBin").value  = r.bin;
+  makeQR();
+  window.scrollTo(0, document.getElementById("qrPreview").offsetTop);
+}
+
+function printQR() {
+  const canvas  = document.getElementById("qr");
+  const label   = document.getElementById("qrLabelText").innerHTML;
+  const dataUrl = canvas.toDataURL();
+
+  const win = window.open("", "_blank");
+  win.document.write(
+    "<html><head><title>Box Label</title>" +
+    "<style>" +
+    "  body { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; margin:0; font-family:monospace; }" +
+    "  img  { width:240px; height:240px; }" +
+    "  .lbl { text-align:center; margin-top:12px; line-height:1.6; }" +
+    "  .room { font-size:14px; color:#666; }" +
+    "  .cat  { font-size:14px; color:#666; }" +
+    "  .bin  { font-size:28px; font-weight:bold; color:#1a2e5a; }" +
+    "</style></head><body>" +
+    "<img src='" + dataUrl + "' />" +
+    "<div class='lbl'>" + label.replace("label-room", "room").replace("label-category", "cat").replace("label-bin", "bin") + "</div>" +
+    "<script>window.onload=function(){window.print();window.close();}<\/script>" +
+    "</body></html>"
+  );
+  win.document.close();
 }
 
 /* ================================================
@@ -873,6 +1171,10 @@ function pause(ms) { return new Promise(r => setTimeout(r, ms)); }
    KEYBOARD SHORTCUTS
 ================================================ */
 document.addEventListener("DOMContentLoaded", () => {
+  loadQRLists();
+  document.getElementById("addItemInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") confirmAddItem();
+  });
   document.getElementById("manualIsbn").addEventListener("keydown", e => {
     if (e.key === "Enter") submitManualIsbn();
   });
