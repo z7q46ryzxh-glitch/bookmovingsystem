@@ -691,7 +691,8 @@ function renderRecent() {
    BOOK LOOKUP — ISBN via Apps Script
 ================================================ */
 async function fetchBook(isbn) {
-  // Source 1: Apps Script (Google Books + Open Library chain)
+
+  // Source 1: Apps Script (Open Library chain)
   setStatus("Looking up ISBN " + isbn + "...");
   try {
     const c1 = new AbortController();
@@ -704,8 +705,8 @@ async function fetchBook(isbn) {
     }
   } catch(e1) {}
 
-  // Source 2: Open Library direct (in case Apps Script is slow)
-  setStatus("Trying Open Library for " + isbn + "...");
+  // Source 2: Open Library search directly from browser
+  setStatus("Trying Open Library search for " + isbn + "...");
   try {
     const c2 = new AbortController();
     const t2 = setTimeout(() => c2.abort(), FETCH_TIMEOUT_MS);
@@ -726,9 +727,35 @@ async function fetchBook(isbn) {
     }
   } catch(e2) {}
 
+  // Source 3: Open Library ISBN API directly from browser  
+  setStatus("Trying Open Library ISBN API for " + isbn + "...");
+  try {
+    const c3 = new AbortController();
+    const t3 = setTimeout(() => c3.abort(), FETCH_TIMEOUT_MS);
+    const r3 = await fetch(
+      "https://openlibrary.org/isbn/" + isbn + ".json",
+      { signal: c3.signal }
+    );
+    clearTimeout(t3);
+    if (r3.ok) {
+      const d3 = await r3.json();
+      if (d3.title) {
+        // Fetch author separately if available
+        let author = "Unknown Author";
+        if (d3.authors && d3.authors[0] && d3.authors[0].key) {
+          try {
+            const ar = await fetch("https://openlibrary.org" + d3.authors[0].key + ".json");
+            const ad = await ar.json();
+            author = ad.name || ad.personal_name || "Unknown Author";
+          } catch {}
+        }
+        return { isbn: isbn, title: d3.title, author: author, source: "Open Library ISBN" };
+      }
+    }
+  } catch(e3) {}
+
   return null;
 }
-
 /* ================================================
    SEND TO SHEET
 ================================================ */
