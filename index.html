@@ -310,25 +310,46 @@
     background: #fff;
     border: 2px solid var(--border);
     border-radius: var(--radius);
-    padding: 16px;
+    padding: 20px 16px;
     margin-top: 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 14px;
   }
+  .qr-label canvas { width: 280px !important; height: 280px !important; }
   .qr-label-text {
     font-family: var(--mono);
-    font-size: 18px;
     font-weight: 600;
     color: var(--navy);
     text-align: center;
-    letter-spacing: 0.05em;
-    line-height: 1.4;
+    width: 100%;
   }
-  .qr-label-text .label-room     { font-size: 13px; color: var(--muted); display: block; }
-  .qr-label-text .label-category { font-size: 13px; color: var(--muted); display: block; }
-  .qr-label-text .label-bin      { font-size: 24px; color: var(--navy); display: block; margin-top: 2px; }
+  .qr-label-text .label-room {
+    display: block;
+    font-size: 26px;
+    color: var(--navy);
+    letter-spacing: 0.02em;
+    margin-bottom: 4px;
+  }
+  .qr-label-text .label-category {
+    display: block;
+    font-size: 14px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .qr-label-text .label-bin {
+    display: block;
+    font-size: 42px;
+    color: var(--navy);
+    letter-spacing: 0.05em;
+    line-height: 1.1;
+    border-top: 1.5px solid var(--border);
+    padding-top: 8px;
+    margin-top: 4px;
+  }
 
   .recent-qr-item {
     display: flex;
@@ -521,7 +542,7 @@
 /* ================================================
    CONFIG
 ================================================ */
-const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbzjtrxtolzSyADijsemxKpyC8x9azHoqF-uw3SOIzqm-Eut-oKNBj0c56BGgAYIAyQvGQ/exec";
+const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbxwM2JOmI0qGrl3RcUS1K6eMbfukSsqZ0wu89VBx669fceAlLS-HlbwuzR2Cz272onPlA/exec";
 const FETCH_TIMEOUT_MS = 6000;
 const SCAN_COOLDOWN_MS = 1500;
 const MAX_RECENT       = 8;
@@ -1079,7 +1100,7 @@ function makeQR() {
   const preview = document.getElementById("qrPreview");
   preview.style.display = "block";
 
-  QRCode.toCanvas(document.getElementById("qr"), value, { width: 220 }, () => {
+  QRCode.toCanvas(document.getElementById("qr"), value, { width: 280 }, () => {
     document.getElementById("qrLabelText").innerHTML =
       "<span class='label-room'>"     + room + "</span>" +
       "<span class='label-category'>" + cat  + "</span>" +
@@ -1135,11 +1156,11 @@ function printQR() {
     "<html><head><title>Box Label</title>" +
     "<style>" +
     "  body { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; margin:0; font-family:monospace; }" +
-    "  img  { width:240px; height:240px; }" +
+    "  img  { width:300px; height:300px; }" +
     "  .lbl { text-align:center; margin-top:12px; line-height:1.6; }" +
-    "  .room { font-size:14px; color:#666; }" +
-    "  .cat  { font-size:14px; color:#666; }" +
-    "  .bin  { font-size:28px; font-weight:bold; color:#1a2e5a; }" +
+    "  .room { font-size:26px; font-weight:bold; color:#1a2e5a; display:block; margin-bottom:4px; }" +
+    "  .cat  { font-size:14px; color:#666; text-transform:uppercase; letter-spacing:0.1em; display:block; margin-bottom:8px; }" +
+    "  .bin  { font-size:48px; font-weight:bold; color:#1a2e5a; display:block; border-top:1.5px solid #dde2ed; padding-top:8px; margin-top:4px; }" +
     "</style></head><body>" +
     "<img src='" + dataUrl + "' />" +
     "<div class='lbl'>" + label.replace("label-room", "room").replace("label-category", "cat").replace("label-bin", "bin") + "</div>" +
