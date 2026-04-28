@@ -1,533 +1,657 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Move Inventory Pro</title>
-
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-
 <style>
-  :root {
-    --navy:       #1a2e5a;
-    --blue:       #2352a0;
-    --blue-light: #3a6fd8;
-    --success:    #1d8a4e;
-    --success-bg: #eafaf1;
-    --danger:     #c0392b;
-    --danger-bg:  #fdf0ef;
-    --warn-bg:    #fff8e6;
-    --bg:         #f0f2f7;
-    --surface:    #ffffff;
-    --border:     #dde2ed;
-    --text:       #1a2035;
-    --muted:      #6b7592;
-    --mono:       'DM Mono', monospace;
-    --sans:       'DM Sans', sans-serif;
-    --radius:     12px;
-    --radius-sm:  8px;
-  }
+:root {
+  --navy:       #1a2e5a;
+  --blue:       #2352a0;
+  --blue-light: #3a6fd8;
+  --success:    #1d8a4e;
+  --success-bg: #eafaf1;
+  --danger:     #c0392b;
+  --danger-bg:  #fdf0ef;
+  --warn-bg:    #fff8e6;
+  --bg:         #f0f2f7;
+  --surface:    #ffffff;
+  --border:     #dde2ed;
+  --text:       #1a2035;
+  --muted:      #6b7592;
+  --mono:       'DM Mono', monospace;
+  --sans:       'DM Sans', sans-serif;
+  --radius:     12px;
+  --radius-sm:  8px;
+  /* Label font sizes - controlled by settings */
+  --lbl-room-size:     26px;
+  --lbl-category-size: 14px;
+  --lbl-bin-size:      42px;
+}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+[data-theme="dark"] {
+  --navy:       #a8c4f8;
+  --blue:       #5b8dee;
+  --blue-light: #7aaeff;
+  --success:    #4caf50;
+  --success-bg: #1a3325;
+  --danger:     #ef5350;
+  --danger-bg:  #2d1515;
+  --warn-bg:    #2d2200;
+  --bg:         #0f1117;
+  --surface:    #1a1d27;
+  --border:     #2e3347;
+  --text:       #e8eaf6;
+  --muted:      #8892b0;
+}
 
-  body {
-    font-family: var(--sans);
-    background: var(--bg);
-    color: var(--text);
-    padding: 16px;
-    max-width: 480px;
-    margin: 0 auto;
-    padding-bottom: 40px;
-  }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .app-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 1.5px solid var(--border);
-  }
-  .app-header h1 { font-size: 20px; font-weight: 600; color: var(--navy); letter-spacing: -0.3px; }
-  .app-header .icon { font-size: 22px; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  padding: 0;
+  max-width: 480px;
+  margin: 0 auto;
+  padding-bottom: 60px;
+  transition: background 0.2s, color 0.2s;
+}
 
-  .card {
-    background: var(--surface);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    padding: 14px 16px;
-    margin-bottom: 12px;
-  }
-  .card-title {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 10px;
-  }
+/* ── Sticky header ── */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--surface);
+  border-bottom: 1.5px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.app-header h1 { font-size: 18px; font-weight: 600; color: var(--navy); flex: 1; }
+.app-header .icon { font-size: 20px; }
+.header-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  color: var(--muted);
+  transition: background 0.15s;
+}
+.header-btn:hover { background: var(--bg); }
 
-  #activeBox {
-    font-family: var(--mono);
-    font-size: 15px;
-    color: var(--muted);
-    padding: 8px 10px;
-    background: var(--bg);
-    border-radius: var(--radius-sm);
-    margin-bottom: 10px;
-  }
-  #activeBox.locked {
-    color: var(--success);
-    background: var(--success-bg);
-    font-weight: 500;
-    border: 1px solid #a8dfc0;
-  }
+/* ── Active box banner ── */
+#activeBanner {
+  position: sticky;
+  top: 57px;
+  z-index: 40;
+  background: var(--navy);
+  color: #fff;
+  padding: 8px 16px;
+  font-family: var(--mono);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  transition: background 0.2s;
+}
+#activeBanner.no-box { background: var(--border); color: var(--muted); }
+#activeBanner .banner-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.7; }
+#activeBanner .banner-box   { font-weight: 500; font-size: 14px; }
+#activeBanner .banner-unlock {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: #fff;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--sans);
+}
+#activeBanner.no-box .banner-unlock { display: none; }
 
-  .btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    width: 100%;
-    padding: 11px 14px;
-    border-radius: var(--radius-sm);
-    font-family: var(--sans);
-    font-size: 15px;
-    font-weight: 600;
-    border: none;
-    cursor: pointer;
-    transition: opacity 0.15s, transform 0.1s;
-    margin-bottom: 7px;
-  }
-  .btn:active { transform: scale(0.98); opacity: 0.85; }
-  .btn-primary   { background: var(--blue); color: #fff; }
-  .btn-secondary { background: var(--bg); color: var(--navy); border: 1px solid var(--border); }
-  .btn-danger    { background: var(--danger-bg); color: var(--danger); border: 1px solid #f5c0bb; }
-  .btn-stop      { background: #2c2c2c; color: #fff; }
-  .btn-sm        { padding: 7px 12px; font-size: 13px; margin-bottom: 0; }
-  .btn-row       { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+/* ── Page padding ── */
+.page { padding: 12px 16px; }
 
-  input[type="text"], input[type="number"] {
-    width: 100%;
-    padding: 10px 12px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    font-family: var(--sans);
-    font-size: 15px;
-    background: var(--bg);
-    color: var(--text);
-    margin-bottom: 8px;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  input:focus { border-color: var(--blue-light); background: #fff; }
+/* ── Cards ── */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-bottom: 10px;
+  overflow: hidden;
+  transition: background 0.2s, border-color 0.2s;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  gap: 8px;
+}
+.card-header:hover { background: var(--bg); }
+.card-title-row { display: flex; align-items: center; gap: 8px; }
+.card-icon  { font-size: 18px; }
+.card-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.card-chevron { font-size: 12px; color: var(--muted); transition: transform 0.2s; }
+.card-chevron.open { transform: rotate(180deg); }
+.card-body  { padding: 0 14px 14px; }
+.card-body.collapsed { display: none; }
 
-  #reader { width: 100%; border-radius: var(--radius-sm); overflow: hidden; }
+/* ── Active box card (always open, no chevron) ── */
+#activeBox {
+  font-family: var(--mono);
+  font-size: 15px;
+  color: var(--muted);
+  padding: 8px 10px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+}
+#activeBox.locked {
+  color: var(--success);
+  background: var(--success-bg);
+  font-weight: 500;
+  border: 1px solid #a8dfc0;
+}
 
-  #scanStatus {
-    font-size: 13px;
-    color: var(--muted);
-    min-height: 18px;
-    margin: 6px 0 4px;
-    font-family: var(--mono);
-  }
-  #scanStatus.ok   { color: var(--success); }
-  #scanStatus.err  { color: var(--danger); }
-  #scanStatus.warn { color: #a07000; }
+/* ── Buttons ── */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  margin-bottom: 7px;
+}
+.btn:active { transform: scale(0.98); opacity: 0.85; }
+.btn-primary   { background: var(--blue); color: #fff; }
+.btn-secondary { background: var(--bg); color: var(--navy); border: 1px solid var(--border); }
+.btn-danger    { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
+.btn-stop      { background: #2c2c2c; color: #fff; }
+.btn-icon      { width: auto; padding: 10px 14px; margin: 0; font-size: 16px; line-height: 1; }
+.btn-sm        { padding: 7px 12px; font-size: 13px; margin-bottom: 0; }
+.btn-row       { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-  #lastScanned {
-    display: none;
-    background: var(--success-bg);
-    border: 1px solid #a8dfc0;
-    border-radius: var(--radius-sm);
-    padding: 10px 12px;
-    margin-top: 8px;
-    font-size: 14px;
-  }
-  #lastScanned .book-title { font-weight: 600; font-size: 15px; margin-bottom: 2px; }
-  #lastScanned .book-meta  { color: var(--muted); font-size: 13px; }
+/* ── Inputs ── */
+input[type="text"],
+input[type="number"],
+select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-family: var(--sans);
+  font-size: 15px;
+  background: var(--bg);
+  color: var(--text);
+  margin-bottom: 8px;
+  outline: none;
+  transition: border-color 0.15s, background 0.2s;
+}
+input:focus, select:focus { border-color: var(--blue-light); background: var(--surface); }
 
-  /* Not-found panel */
-  #notFoundPanel {
-    display: none;
-    background: var(--warn-bg);
-    border: 1px solid #f0c040;
-    border-radius: var(--radius-sm);
-    padding: 12px;
-    margin-top: 8px;
-  }
-  #notFoundPanel .panel-title {
-    font-weight: 600;
-    font-size: 14px;
-    margin-bottom: 10px;
-    color: #7a5800;
-  }
+/* ── Scanner ── */
+#reader { width: 100%; border-radius: var(--radius-sm); overflow: hidden; }
 
-  /* Title search results */
-  .search-result-btn {
-    display: block;
-    width: 100%;
-    text-align: left;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 10px 12px;
-    margin-bottom: 6px;
-    cursor: pointer;
-    font-family: var(--sans);
-    transition: border-color 0.15s, background 0.15s;
-  }
-  .search-result-btn:hover  { border-color: var(--blue-light); background: #f0f5ff; }
-  .search-result-btn:active { background: #e0ecff; }
-  .srb-title  { font-weight: 600; font-size: 14px; color: var(--text); }
-  .srb-author { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .srb-isbn   { font-size: 11px; color: var(--blue); font-family: var(--mono); margin-top: 2px; }
+/* ── Status ── */
+#scanStatus {
+  font-size: 13px;
+  color: var(--muted);
+  min-height: 18px;
+  margin: 6px 0 4px;
+  font-family: var(--mono);
+}
+#scanStatus.ok   { color: var(--success); }
+#scanStatus.err  { color: var(--danger); }
+#scanStatus.warn { color: #a07000; }
 
-  /* Divider */
-  .or-divider {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 10px 0;
-    font-size: 12px;
-    color: var(--muted);
-  }
-  .or-divider::before, .or-divider::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
+/* ── Last scanned ── */
+#lastScanned {
+  display: none;
+  background: var(--success-bg);
+  border: 1px solid #a8dfc0;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-top: 8px;
+  font-size: 14px;
+}
+#lastScanned .book-title { font-weight: 600; font-size: 15px; margin-bottom: 2px; }
+#lastScanned .book-meta  { color: var(--muted); font-size: 13px; }
 
-  /* Recent list */
-  #recentList { margin-top: 10px; display: none; }
-  #recentList .recent-item {
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
-  }
-  #recentList .recent-item:last-child { border-bottom: none; }
-  #recentList .recent-title { font-weight: 600; }
-  #recentList .recent-meta  { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+/* ── Not found panel ── */
+#notFoundPanel {
+  display: none;
+  background: var(--warn-bg);
+  border: 1px solid #f0c040;
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-top: 8px;
+}
+#notFoundPanel .panel-title { font-weight: 600; font-size: 14px; margin-bottom: 10px; color: #7a5800; }
+.search-result-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: border-color 0.15s, background 0.15s;
+}
+.search-result-btn:hover { border-color: var(--blue-light); background: var(--bg); }
+.srb-title  { font-weight: 600; font-size: 14px; color: var(--text); }
+.srb-author { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.srb-isbn   { font-size: 11px; color: var(--blue); font-family: var(--mono); margin-top: 2px; }
+.or-divider {
+  display: flex; align-items: center; gap: 8px;
+  margin: 10px 0; font-size: 12px; color: var(--muted);
+}
+.or-divider::before, .or-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 
-  /* ISBN row */
-  .isbn-row {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 8px;
-    align-items: center;
-    margin-top: 4px;
-  }
-  .isbn-row input { margin-bottom: 0; }
+/* ── Recent scans ── */
+#recentList { margin-top: 10px; display: none; }
+#recentList .recent-item { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+#recentList .recent-item:last-child { border-bottom: none; }
+#recentList .recent-title { font-weight: 600; }
+#recentList .recent-meta  { color: var(--muted); font-family: var(--mono); font-size: 12px; }
 
-  /* Search results */
-  #searchResults .result-item {
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 14px;
-  }
-  #searchResults .result-item:last-child { border-bottom: none; }
-  #searchResults .result-title  { font-weight: 600; }
-  #searchResults .result-author { color: var(--muted); font-size: 13px; }
-  #searchResults .result-box {
-    display: inline-block;
-    font-family: var(--mono);
-    font-size: 11px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 2px 6px;
-    margin-top: 3px;
-    color: var(--blue);
-  }
-  .empty-msg { color: var(--muted); font-size: 13px; font-style: italic; }
+/* ── ISBN row ── */
+.isbn-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin-top: 4px; }
+.isbn-row input { margin-bottom: 0; }
 
-  /* Stats */
-  .stat-total {
-    font-size: 28px;
-    font-weight: 600;
-    color: var(--navy);
-    font-family: var(--mono);
-    margin-bottom: 12px;
-  }
-  .stat-total span { font-size: 14px; font-weight: 400; color: var(--muted); margin-left: 4px; }
-  .box-stat-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
-  }
-  .box-stat-row:last-child { border-bottom: none; }
-  .box-stat-id    { font-family: var(--mono); color: var(--blue); }
-  .box-stat-count { font-weight: 600; }
+/* ── Search results ── */
+#searchResults .result-item { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+#searchResults .result-item:last-child { border-bottom: none; }
+#searchResults .result-title  { font-weight: 600; }
+#searchResults .result-author { color: var(--muted); font-size: 13px; }
+#searchResults .result-box {
+  display: inline-block; font-family: var(--mono); font-size: 11px;
+  border-radius: 4px; padding: 2px 6px; margin-top: 3px; color: var(--blue);
+  border: 1px solid var(--border); background: var(--bg);
+}
+.empty-msg { color: var(--muted); font-size: 13px; font-style: italic; }
 
-  #qr { display: block; margin: 10px 0; border-radius: var(--radius-sm); }
+/* ── Stats ── */
+.stat-total { font-size: 28px; font-weight: 600; color: var(--navy); font-family: var(--mono); margin-bottom: 12px; }
+.stat-total span { font-size: 14px; font-weight: 400; color: var(--muted); margin-left: 4px; }
+.box-stat-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.box-stat-row:last-child { border-bottom: none; }
+.box-stat-left  { display: flex; align-items: center; gap: 8px; }
+.box-stat-dot   { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.box-stat-id    { font-family: var(--mono); color: var(--blue); }
+.box-stat-count { font-weight: 600; }
 
-  /* QR Generator */
-  .field-label {
-    display: block;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin: 10px 0 5px;
-  }
-  .field-select {
-    flex: 1;
-    padding: 10px 12px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    font-family: var(--sans);
-    font-size: 15px;
-    background: var(--bg);
-    color: var(--text);
-    outline: none;
-  }
-  .dropdown-row {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: 6px;
-    align-items: center;
-  }
-  .bin-row {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 6px;
-    align-items: center;
-  }
-  .btn-icon {
-    width: auto;
-    padding: 10px 14px;
-    margin: 0;
-    font-size: 16px;
-    line-height: 1;
-  }
-  .qr-label {
-    background: #fff;
-    border: 2px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px 16px;
-    margin-top: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
-  }
-  .qr-label canvas { width: 280px !important; height: 280px !important; }
-  .qr-label-text {
-    font-family: var(--mono);
-    font-weight: 600;
-    color: var(--navy);
-    text-align: center;
-    width: 100%;
-  }
-  .qr-label-text .label-room {
-    display: block;
-    font-size: 26px;
-    color: var(--navy);
-    letter-spacing: 0.02em;
-    margin-bottom: 4px;
-  }
-  .qr-label-text .label-category {
-    display: block;
-    font-size: 14px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 6px;
-  }
-  .qr-label-text .label-bin {
-    display: block;
-    font-size: 42px;
-    color: var(--navy);
-    letter-spacing: 0.05em;
-    line-height: 1.1;
-    border-top: 1.5px solid var(--border);
-    padding-top: 8px;
-    margin-top: 4px;
-  }
+/* ── QR Generator ── */
+.field-label {
+  display: block; font-size: 11px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--muted); margin: 10px 0 5px;
+}
+.dropdown-row { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center; }
+.dropdown-row select { margin-bottom: 0; }
+.bin-row { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center; }
+.bin-row input { margin-bottom: 0; }
 
-  .recent-qr-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
-  }
-  .recent-qr-item:last-child { border-bottom: none; }
-  .recent-qr-label { font-family: var(--mono); color: var(--blue); font-weight: 600; }
-  .recent-qr-reprint {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 4px 10px;
-    font-size: 12px;
-    font-family: var(--sans);
-    cursor: pointer;
-    color: var(--navy);
-  }
+.qr-label {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 16px;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.qr-label canvas { width: 280px !important; height: 280px !important; }
+.qr-label-text { font-family: var(--mono); font-weight: 600; color: var(--navy); text-align: center; width: 100%; }
+.qr-label-text .label-room {
+  display: block;
+  font-size: var(--lbl-room-size);
+  color: var(--navy);
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+}
+.qr-label-text .label-category {
+  display: block;
+  font-size: var(--lbl-category-size);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 6px;
+}
+.qr-label-text .label-bin {
+  display: block;
+  font-size: var(--lbl-bin-size);
+  color: var(--navy);
+  letter-spacing: 0.05em;
+  line-height: 1.1;
+  border-top: 1.5px solid var(--border);
+  padding-top: 8px;
+  margin-top: 4px;
+}
 
-  @media print {
-    body > *:not(#printArea) { display: none !important; }
-    #printArea {
-      display: flex !important;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-    }
-  }
+.recent-qr-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.recent-qr-item:last-child { border-bottom: none; }
+.recent-qr-label { font-family: var(--mono); color: var(--blue); font-weight: 600; }
+.recent-qr-reprint {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 4px 10px; font-size: 12px;
+  font-family: var(--sans); cursor: pointer; color: var(--navy);
+}
 
-  #toast {
-    display: none;
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--navy);
-    color: #fff;
-    padding: 10px 20px;
-    border-radius: 99px;
-    font-size: 14px;
-    font-weight: 600;
-    z-index: 999;
-    white-space: nowrap;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  }
+/* ── Settings panel ── */
+#settingsPanel {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0,0,0,0.5);
+  align-items: flex-end;
+  justify-content: center;
+}
+#settingsPanel.open { display: flex; }
+.settings-sheet {
+  background: var(--surface);
+  border-radius: var(--radius) var(--radius) 0 0;
+  width: 100%;
+  max-width: 480px;
+  padding: 20px 20px 36px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.settings-title {
+  font-size: 16px; font-weight: 600; color: var(--text);
+  margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center;
+}
+.settings-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--muted); }
+.setting-row { margin-bottom: 16px; }
+.setting-label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--text);
+}
+.setting-label span { font-family: var(--mono); font-size: 13px; color: var(--blue); }
+input[type="range"] {
+  width: 100%; height: 6px; border-radius: 3px;
+  accent-color: var(--blue); cursor: pointer;
+  background: var(--border); margin-bottom: 0; padding: 0; border: none;
+}
+.setting-section-title {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted); margin: 20px 0 12px;
+}
+.toggle-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.toggle-row:last-child { border-bottom: none; }
+.toggle-label { font-size: 14px; color: var(--text); }
+.toggle {
+  position: relative; width: 44px; height: 24px;
+  background: var(--border); border-radius: 12px; cursor: pointer;
+  transition: background 0.2s; border: none; flex-shrink: 0;
+}
+.toggle.on { background: var(--blue); }
+.toggle::after {
+  content: ""; position: absolute; width: 18px; height: 18px;
+  background: #fff; border-radius: 50%; top: 3px; left: 3px;
+  transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle.on::after { transform: translateX(20px); }
+
+/* ── Add item modal ── */
+#addItemModal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4); z-index: 300;
+  align-items: center; justify-content: center;
+}
+#addItemModal.open { display: flex; }
+.modal-box {
+  background: var(--surface); border-radius: var(--radius);
+  padding: 20px; margin: 20px; width: 100%; max-width: 340px;
+}
+.modal-title { font-weight: 600; margin-bottom: 12px; color: var(--text); }
+
+/* ── Toast ── */
+#toast {
+  display: none; position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%); background: var(--navy);
+  color: #fff; padding: 10px 20px; border-radius: 99px;
+  font-size: 14px; font-weight: 600; z-index: 999;
+  white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+
+/* ── Room colors ── */
+.dot-0 { background: #3a6fd8; }
+.dot-1 { background: #1d8a4e; }
+.dot-2 { background: #e67e22; }
+.dot-3 { background: #8e44ad; }
+.dot-4 { background: #c0392b; }
+.dot-5 { background: #16a085; }
+.dot-6 { background: #d4ac0d; }
+.dot-7 { background: #2c3e50; }
+
+@media print {
+  body > * { display: none !important; }
+  #printArea { display: block !important; }
+}
+#printArea { display: none; }
 </style>
 </head>
 <body>
 
+<!-- STICKY HEADER -->
 <div class="app-header">
   <span class="icon">📦</span>
   <h1>Move Inventory Pro</h1>
+  <button class="header-btn" onclick="openSettings()" title="Settings">⚙️</button>
+  <button class="header-btn" onclick="toggleTheme()" id="themeBtn" title="Toggle dark mode">🌙</button>
 </div>
 
-<!-- ACTIVE BOX -->
-<div class="card">
-  <div class="card-title">Active Box</div>
-  <div id="activeBox">No box selected</div>
-  <div class="btn-row">
-    <button class="btn btn-primary" onclick="scanBox()">📷 Scan Box</button>
-    <button class="btn btn-danger"  onclick="unlockBox()">🔓 Unlock</button>
+<!-- ACTIVE BOX BANNER -->
+<div id="activeBanner" class="no-box">
+  <div>
+    <div class="banner-label">Active Box</div>
+    <div class="banner-box" id="bannerText">No box selected</div>
   </div>
+  <button class="banner-unlock" onclick="unlockBox()">🔓 Unlock</button>
 </div>
 
-<!-- BOOK SCANNER -->
-<div class="card">
-  <div class="card-title">Scan Books</div>
-  <div class="btn-row">
-    <button class="btn btn-primary" onclick="startScan()">📚 Start Scan</button>
-    <button class="btn btn-stop"    onclick="stopScan()">⏹ Stop</button>
-  </div>
+<div class="page">
 
-  <div class="isbn-row">
-    <input type="number" id="manualIsbn" placeholder="Or enter ISBN manually" />
-    <button class="btn btn-secondary" style="width:auto;padding:10px 14px;margin:0;" onclick="submitManualIsbn()">→</button>
-  </div>
-
-  <div id="scanStatus"></div>
-  <div id="reader"></div>
-  <div id="lastScanned"></div>
-
-  <!-- Not found panel -->
-  <div id="notFoundPanel">
-    <div class="panel-title">📖 Book not found — search by title</div>
-
-    <!-- Title search -->
-    <div class="isbn-row" style="margin-bottom:8px;">
-      <input type="text" id="titleSearchInput" placeholder="Type title or author..." style="margin-bottom:0;" />
-      <button class="btn btn-primary btn-sm" style="width:auto;" onclick="searchByTitle()">Search</button>
+  <!-- ACTIVE BOX CARD -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard('boxCard')">
+      <div class="card-title-row"><span class="card-icon">📦</span><span class="card-title">Active Box</span></div>
+      <span class="card-chevron open" id="boxCardChevron">▼</span>
     </div>
-    <div id="titleSearchResults"></div>
-
-    <div class="or-divider">or enter manually</div>
-
-    <!-- Manual fallback -->
-    <input type="text" id="manualTitle"       placeholder="Title" />
-    <input type="text" id="manualAuthor"      placeholder="Author" />
-    <input type="text" id="manualIsbnConfirm" placeholder="ISBN" />
-    <div class="btn-row">
-      <button class="btn btn-primary"   onclick="submitManualEntry()">💾 Save</button>
-      <button class="btn btn-secondary" onclick="dismissNotFound()">✕ Skip</button>
+    <div class="card-body" id="boxCard">
+      <div id="activeBox">No box selected</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="scanBox()">📷 Scan Box</button>
+        <button class="btn btn-danger"  onclick="unlockBox()">🔓 Unlock</button>
+      </div>
     </div>
   </div>
 
-  <div id="recentList"></div>
-</div>
-
-<!-- SEARCH -->
-<div class="card">
-  <div class="card-title">Search Books</div>
-  <input type="text" id="searchInput" placeholder="Title or author..." />
-  <button class="btn btn-primary" onclick="searchBooks()">🔍 Search</button>
-  <div id="searchResults" style="margin-top:8px;"></div>
-</div>
-
-<!-- STATS -->
-<div class="card">
-  <div class="card-title">Stats</div>
-  <div id="stats"><span class="empty-msg">Tap refresh to load.</span></div>
-  <button class="btn btn-secondary" style="margin-top:10px;" onclick="loadStats()">↻ Refresh Stats</button>
-</div>
-
-<!-- QR GENERATOR -->
-<div class="card">
-  <div class="card-title">Generate Box QR Code</div>
-
-  <!-- Room -->
-  <label class="field-label">Room</label>
-  <div class="dropdown-row">
-    <select id="qrRoom" class="field-select"></select>
-    <button class="btn btn-secondary btn-icon" onclick="showAddItem('room')" title="Add room">+</button>
-    <button class="btn btn-danger btn-icon"    onclick="removeItem('room')"  title="Remove selected">✕</button>
-  </div>
-
-  <!-- Category -->
-  <label class="field-label">Category</label>
-  <div class="dropdown-row">
-    <select id="qrCat" class="field-select"></select>
-    <button class="btn btn-secondary btn-icon" onclick="showAddItem('category')" title="Add category">+</button>
-    <button class="btn btn-danger btn-icon"    onclick="removeItem('category')"  title="Remove selected">✕</button>
-  </div>
-
-  <!-- Bin number -->
-  <label class="field-label">Bin #</label>
-  <div class="bin-row">
-    <button class="btn btn-secondary btn-icon" onclick="changeBin(-1)">−</button>
-    <input type="number" id="qrBin" value="1" min="1" style="text-align:center;margin:0;" />
-    <button class="btn btn-secondary btn-icon" onclick="changeBin(1)">+</button>
-  </div>
-
-  <button class="btn btn-primary" style="margin-top:10px;" onclick="makeQR()">Generate QR Code</button>
-
-  <!-- Label preview -->
-  <div id="qrPreview" style="display:none;">
-    <div class="qr-label">
-      <canvas id="qr"></canvas>
-      <div id="qrLabelText" class="qr-label-text"></div>
+  <!-- SCAN BOOKS CARD -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard('scanCard')">
+      <div class="card-title-row"><span class="card-icon">📚</span><span class="card-title">Scan Books</span></div>
+      <span class="card-chevron open" id="scanCardChevron">▼</span>
     </div>
-    <div class="btn-row" style="margin-top:10px;">
-      <button class="btn btn-secondary" onclick="printQR()">🖨️ Print Label</button>
-      <button class="btn btn-primary"   onclick="makeQRNext()">Next Bin →</button>
+    <div class="card-body" id="scanCard">
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="startScan()">📚 Start Scan</button>
+        <button class="btn btn-stop"    onclick="stopScan()">⏹ Stop</button>
+      </div>
+      <div class="isbn-row">
+        <input type="number" id="manualIsbn" placeholder="Or enter ISBN manually" />
+        <button class="btn btn-secondary" style="width:auto;padding:10px 14px;margin:0;" onclick="submitManualIsbn()">→</button>
+      </div>
+      <div id="scanStatus"></div>
+      <div id="reader"></div>
+      <div id="lastScanned"></div>
+      <div id="notFoundPanel">
+        <div class="panel-title">📖 Book not found — search by title</div>
+        <div class="isbn-row" style="margin-bottom:8px;">
+          <input type="text" id="titleSearchInput" placeholder="Type title or author..." style="margin-bottom:0;" />
+          <button class="btn btn-primary btn-sm" style="width:auto;" onclick="searchByTitle()">Search</button>
+        </div>
+        <div id="titleSearchResults"></div>
+        <div class="or-divider">or enter manually</div>
+        <input type="text"   id="manualTitle"       placeholder="Title" />
+        <input type="text"   id="manualAuthor"      placeholder="Author" />
+        <input type="text"   id="manualIsbnConfirm" placeholder="ISBN" />
+        <div class="btn-row">
+          <button class="btn btn-primary"   onclick="submitManualEntry()">💾 Save</button>
+          <button class="btn btn-secondary" onclick="dismissNotFound()">✕ Skip</button>
+        </div>
+      </div>
+      <div id="recentList"></div>
     </div>
   </div>
 
-  <!-- Recent labels -->
-  <div id="recentQR" style="display:none;margin-top:14px;">
-    <div class="card-title">Recently Generated</div>
-    <div id="recentQRList"></div>
+  <!-- SEARCH CARD -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard('searchCard')">
+      <div class="card-title-row"><span class="card-icon">🔍</span><span class="card-title">Search Books</span></div>
+      <span class="card-chevron" id="searchCardChevron">▼</span>
+    </div>
+    <div class="card-body collapsed" id="searchCard">
+      <input type="text" id="searchInput" placeholder="Title or author..." />
+      <button class="btn btn-primary" onclick="searchBooks()">🔍 Search</button>
+      <div id="searchResults" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <!-- STATS CARD -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard('statsCard')">
+      <div class="card-title-row"><span class="card-icon">📊</span><span class="card-title">Stats</span></div>
+      <span class="card-chevron" id="statsCardChevron">▼</span>
+    </div>
+    <div class="card-body collapsed" id="statsCard">
+      <div id="stats"><span class="empty-msg">Tap refresh to load.</span></div>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn btn-secondary" onclick="loadStats()">↻ Refresh</button>
+        <button class="btn btn-secondary" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR GENERATOR CARD -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard('qrCard')">
+      <div class="card-title-row"><span class="card-icon">🏷️</span><span class="card-title">Generate Box QR</span></div>
+      <span class="card-chevron" id="qrCardChevron">▼</span>
+    </div>
+    <div class="card-body collapsed" id="qrCard">
+      <label class="field-label">Room</label>
+      <div class="dropdown-row">
+        <select id="qrRoom"></select>
+        <button class="btn btn-secondary btn-icon" onclick="showAddItem('room')">+</button>
+        <button class="btn btn-danger btn-icon"    onclick="removeItem('room')">✕</button>
+      </div>
+      <label class="field-label">Category</label>
+      <div class="dropdown-row">
+        <select id="qrCat"></select>
+        <button class="btn btn-secondary btn-icon" onclick="showAddItem('category')">+</button>
+        <button class="btn btn-danger btn-icon"    onclick="removeItem('category')">✕</button>
+      </div>
+      <label class="field-label">Bin #</label>
+      <div class="bin-row">
+        <button class="btn btn-secondary btn-icon" onclick="changeBin(-1)">−</button>
+        <input type="number" id="qrBin" value="1" min="1" style="text-align:center;margin:0;" />
+        <button class="btn btn-secondary btn-icon" onclick="changeBin(1)">+</button>
+      </div>
+      <button class="btn btn-primary" style="margin-top:10px;" onclick="makeQR()">Generate QR Code</button>
+      <div id="qrPreview" style="display:none;">
+        <div class="qr-label">
+          <canvas id="qr"></canvas>
+          <div id="qrLabelText" class="qr-label-text"></div>
+        </div>
+        <div class="btn-row" style="margin-top:10px;">
+          <button class="btn btn-secondary" onclick="printQR()">🖨️ Print</button>
+          <button class="btn btn-primary"   onclick="makeQRNext()">Next Bin →</button>
+        </div>
+      </div>
+      <div id="recentQR" style="display:none;margin-top:14px;">
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Recently Generated</div>
+        <div id="recentQRList"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end .page -->
+
+<!-- SETTINGS PANEL -->
+<div id="settingsPanel">
+  <div class="settings-sheet">
+    <div class="settings-title">
+      Settings
+      <button class="settings-close" onclick="closeSettings()">✕</button>
+    </div>
+
+    <div class="setting-section-title">Label Font Sizes</div>
+
+    <div class="setting-row">
+      <div class="setting-label">Room <span id="roomSizeVal">26px</span></div>
+      <input type="range" id="roomSizeSlider" min="14" max="48" value="26"
+             oninput="updateLabelSize('room', this.value)" />
+    </div>
+    <div class="setting-row">
+      <div class="setting-label">Category <span id="catSizeVal">14px</span></div>
+      <input type="range" id="catSizeSlider" min="10" max="32" value="14"
+             oninput="updateLabelSize('category', this.value)" />
+    </div>
+    <div class="setting-row">
+      <div class="setting-label">Bin # <span id="binSizeVal">42px</span></div>
+      <input type="range" id="binSizeSlider" min="20" max="72" value="42"
+             oninput="updateLabelSize('bin', this.value)" />
+    </div>
+
+    <div class="setting-section-title">Appearance</div>
+    <div class="toggle-row">
+      <span class="toggle-label">Dark Mode</span>
+      <button class="toggle" id="darkToggle" onclick="toggleTheme()"></button>
+    </div>
+
+    <button class="btn btn-secondary" style="margin-top:20px;" onclick="resetSettings()">Reset to Defaults</button>
   </div>
 </div>
 
-<!-- Add item modal -->
-<div id="addItemModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:var(--radius);padding:20px;margin:20px;width:100%;max-width:340px;">
-    <div id="addItemTitle" style="font-weight:600;margin-bottom:12px;"></div>
+<!-- ADD ITEM MODAL -->
+<div id="addItemModal">
+  <div class="modal-box">
+    <div class="modal-title" id="addItemTitle"></div>
     <input type="text" id="addItemInput" placeholder="Enter name..." />
     <div class="btn-row">
       <button class="btn btn-primary"   onclick="confirmAddItem()">Add</button>
@@ -537,6 +661,7 @@
 </div>
 
 <div id="toast"></div>
+<div id="printArea"></div>
 
 <script>
 /* ================================================
@@ -546,6 +671,13 @@ const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbxwM2JOmI0qGrl
 const FETCH_TIMEOUT_MS = 6000;
 const SCAN_COOLDOWN_MS = 1500;
 const MAX_RECENT       = 8;
+const QR_RECENT_MAX    = 5;
+const ROOM_COLORS      = ["dot-0","dot-1","dot-2","dot-3","dot-4","dot-5","dot-6","dot-7"];
+
+const QR_DEFAULTS = {
+  rooms:      ["Storage", "Donation", "Master Bedroom"],
+  categories: ["Books"]
+};
 
 /* ================================================
    STATE
@@ -556,7 +688,11 @@ let activeCategory  = "";
 let activeBoxNumber = "";
 let scanLock        = false;
 let recentScans     = [];
-let pendingIsbn     = "";   // ISBN held while user searches by title
+let pendingIsbn     = "";
+let qrRooms         = [];
+let qrCategories    = [];
+let qrRecentList    = [];
+let addItemType     = "";
 
 /* ================================================
    FEEDBACK
@@ -587,6 +723,89 @@ function setStatus(msg, type) {
   const el = document.getElementById("scanStatus");
   el.textContent = msg;
   el.className = type;
+}
+
+/* ================================================
+   COLLAPSIBLE CARDS
+================================================ */
+function toggleCard(id) {
+  const body    = document.getElementById(id);
+  const chevron = document.getElementById(id + "Chevron");
+  const collapsed = body.classList.toggle("collapsed");
+  if (chevron) chevron.classList.toggle("open", !collapsed);
+}
+
+/* ================================================
+   THEME
+================================================ */
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const next   = isDark ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("theme", next);
+  document.getElementById("themeBtn").textContent = next === "dark" ? "☀️" : "🌙";
+  const toggle = document.getElementById("darkToggle");
+  if (toggle) toggle.classList.toggle("on", next === "dark");
+}
+
+function loadTheme() {
+  const saved = localStorage.getItem("theme") || "light";
+  document.documentElement.setAttribute("data-theme", saved);
+  document.getElementById("themeBtn").textContent = saved === "dark" ? "☀️" : "🌙";
+  const toggle = document.getElementById("darkToggle");
+  if (toggle) toggle.classList.toggle("on", saved === "dark");
+}
+
+/* ================================================
+   SETTINGS
+================================================ */
+function openSettings() {
+  document.getElementById("settingsPanel").classList.add("open");
+}
+function closeSettings() {
+  document.getElementById("settingsPanel").classList.remove("open");
+}
+
+function updateLabelSize(type, value) {
+  const v = value + "px";
+  if (type === "room") {
+    document.documentElement.style.setProperty("--lbl-room-size", v);
+    document.getElementById("roomSizeVal").textContent = v;
+    localStorage.setItem("lblRoomSize", value);
+  } else if (type === "category") {
+    document.documentElement.style.setProperty("--lbl-category-size", v);
+    document.getElementById("catSizeVal").textContent = v;
+    localStorage.setItem("lblCatSize", value);
+  } else {
+    document.documentElement.style.setProperty("--lbl-bin-size", v);
+    document.getElementById("binSizeVal").textContent = v;
+    localStorage.setItem("lblBinSize", value);
+  }
+}
+
+function loadSettings() {
+  const roomSize = localStorage.getItem("lblRoomSize") || "26";
+  const catSize  = localStorage.getItem("lblCatSize")  || "14";
+  const binSize  = localStorage.getItem("lblBinSize")  || "42";
+
+  document.documentElement.style.setProperty("--lbl-room-size",     roomSize + "px");
+  document.documentElement.style.setProperty("--lbl-category-size", catSize  + "px");
+  document.documentElement.style.setProperty("--lbl-bin-size",      binSize  + "px");
+
+  document.getElementById("roomSizeSlider").value = roomSize;
+  document.getElementById("catSizeSlider").value  = catSize;
+  document.getElementById("binSizeSlider").value  = binSize;
+  document.getElementById("roomSizeVal").textContent = roomSize + "px";
+  document.getElementById("catSizeVal").textContent  = catSize  + "px";
+  document.getElementById("binSizeVal").textContent  = binSize  + "px";
+}
+
+function resetSettings() {
+  localStorage.removeItem("lblRoomSize");
+  localStorage.removeItem("lblCatSize");
+  localStorage.removeItem("lblBinSize");
+  loadSettings();
+  showToast("Settings reset");
 }
 
 /* ================================================
@@ -639,6 +858,7 @@ async function scanBox() {
         const el = document.getElementById("activeBox");
         el.textContent = activeCategory + " — Box " + activeBoxNumber;
         el.className = "locked";
+        updateBanner();
         beep(); vibrate();
         setStatus("Box locked. Ready to scan books.", "ok");
         stopScan();
@@ -646,6 +866,21 @@ async function scanBox() {
     );
   } catch (err) {
     setStatus("Box scan failed: " + (err.message || err), "err");
+  }
+}
+
+/* ================================================
+   ACTIVE BOX BANNER
+================================================ */
+function updateBanner() {
+  const banner = document.getElementById("activeBanner");
+  const text   = document.getElementById("bannerText");
+  if (activeBox) {
+    banner.className = "";
+    text.textContent = activeBox;
+  } else {
+    banner.className = "no-box";
+    text.textContent = "No box selected";
   }
 }
 
@@ -664,13 +899,13 @@ async function startScan() {
       camera.id,
       { fps: 10, qrbox: { width: 300, height: 150 }, aspectRatio: 1.5 },
       async (text) => {
-        const match = text.match(/(\d{10}|\d{13})/);
+        const match = text.match(/(\d{13})/);
         if (!match || scanLock) return;
+        if (!match[0].startsWith("978") && !match[0].startsWith("979")) return;
         scanLock = true;
         beep(); vibrate();
         await processIsbn(match[0]);
-        if (document.getElementById("notFoundPanel").style.display === "none" ||
-            !document.getElementById("notFoundPanel").style.display) {
+        if (document.getElementById("notFoundPanel").style.display !== "block") {
           await pause(SCAN_COOLDOWN_MS);
           scanLock = false;
           setStatus("Ready — scan next book.");
@@ -693,8 +928,7 @@ async function submitManualIsbn() {
   scanLock = true;
   document.getElementById("manualIsbn").value = "";
   await processIsbn(raw);
-  if (document.getElementById("notFoundPanel").style.display === "none" ||
-      !document.getElementById("notFoundPanel").style.display) {
+  if (document.getElementById("notFoundPanel").style.display !== "block") {
     scanLock = false;
   }
 }
@@ -704,9 +938,7 @@ async function submitManualIsbn() {
 ================================================ */
 async function processIsbn(isbn) {
   setStatus("Looking up ISBN " + isbn + "...");
-
   const book = await fetchBook(isbn);
-
   if (!book) {
     pendingIsbn = isbn;
     setStatus("Not found — search by title below.", "warn");
@@ -719,35 +951,27 @@ async function processIsbn(isbn) {
     document.getElementById("titleSearchInput").focus();
     return;
   }
-
   await saveBook(book.isbn, book.title, book.author, "", book.source);
 }
 
 /* ================================================
-   TITLE SEARCH (via Apps Script -> Google Books)
+   TITLE SEARCH
 ================================================ */
 async function searchByTitle() {
   const q   = document.getElementById("titleSearchInput").value.trim();
   const out = document.getElementById("titleSearchResults");
-  if (!q) { showToast("Enter a title or author to search"); return; }
-
+  if (!q) { showToast("Enter a title or author"); return; }
   out.innerHTML = "<div class='empty-msg'>Searching...</div>";
-
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
-    const res = await fetch(
-      SCRIPT_URL + "?query=" + encodeURIComponent(q),
-      { signal: controller.signal }
-    );
+    const res = await fetch(SCRIPT_URL + "?query=" + encodeURIComponent(q), { signal: controller.signal });
     clearTimeout(timer);
     const data = await res.json();
-
     if (!data.ok || !data.results || data.results.length === 0) {
-      out.innerHTML = "<div class='empty-msg'>No results found. Try a different search.</div>";
+      out.innerHTML = "<div class='empty-msg'>No results. Try a different search.</div>";
       return;
     }
-
     out.innerHTML = data.results.map((b, i) =>
       "<button class='search-result-btn' onclick='selectTitleResult(" + i + ")'>" +
         "<div class='srb-title'>"  + b.title  + "</div>" +
@@ -755,30 +979,21 @@ async function searchByTitle() {
         (b.isbn ? "<div class='srb-isbn'>ISBN " + b.isbn + "</div>" : "") +
       "</button>"
     ).join("");
-
-    // Store results for selection
     window._titleResults = data.results;
-
   } catch (err) {
-    out.innerHTML = "<div class='empty-msg' style='color:var(--danger);'>Search failed. Check your connection.</div>";
+    out.innerHTML = "<div class='empty-msg' style='color:var(--danger);'>Search failed.</div>";
   }
 }
 
 function selectTitleResult(index) {
   const book = window._titleResults[index];
   if (!book) return;
-  saveBook(
-    book.isbn || pendingIsbn,
-    book.title,
-    book.author,
-    "",
-    "Google Books (title search)"
-  );
+  saveBook(book.isbn || pendingIsbn, book.title, book.author, "", "Google Books (title search)");
   dismissNotFound();
 }
 
 /* ================================================
-   MANUAL ENTRY FALLBACK
+   MANUAL ENTRY
 ================================================ */
 async function submitManualEntry() {
   const title  = document.getElementById("manualTitle").value.trim();
@@ -791,12 +1006,12 @@ async function submitManualEntry() {
 }
 
 function dismissNotFound() {
-  document.getElementById("notFoundPanel").style.display = "none";
-  document.getElementById("titleSearchInput").value      = "";
-  document.getElementById("titleSearchResults").innerHTML = "";
-  document.getElementById("manualTitle").value           = "";
-  document.getElementById("manualAuthor").value          = "";
-  document.getElementById("manualIsbnConfirm").value     = "";
+  document.getElementById("notFoundPanel").style.display   = "none";
+  document.getElementById("titleSearchInput").value        = "";
+  document.getElementById("titleSearchResults").innerHTML  = "";
+  document.getElementById("manualTitle").value             = "";
+  document.getElementById("manualAuthor").value            = "";
+  document.getElementById("manualIsbnConfirm").value       = "";
   pendingIsbn = "";
   scanLock    = false;
   setStatus("Ready — scan next book.");
@@ -816,24 +1031,20 @@ async function saveBook(isbn, title, author, notes, source) {
     author:    author || "",
     notes:     notes  || ""
   });
-
   if (!result.ok) {
     setStatus("Save failed: " + (result.error || "unknown"), "err");
     showToast("Save failed");
     return;
   }
-
   const ls = document.getElementById("lastScanned");
   ls.style.display = "block";
   ls.innerHTML =
     "<div class='book-title'>✅ " + title + "</div>" +
     "<div class='book-meta'>" + author + " &nbsp;·&nbsp; ISBN " + isbn + "</div>" +
     (source ? "<div class='book-meta' style='font-size:11px;margin-top:3px;opacity:0.7;'>via " + source + "</div>" : "");
-
-  recentScans.unshift({ title: title, author: author, boxId: activeBox, isbn: isbn });
+  recentScans.unshift({ title, author, boxId: activeBox, isbn });
   if (recentScans.length > MAX_RECENT) recentScans.pop();
   renderRecent();
-
   showToast("✅ Saved!");
   setStatus("Ready — scan next book.", "ok");
 }
@@ -846,7 +1057,7 @@ function renderRecent() {
   if (recentScans.length === 0) { el.style.display = "none"; return; }
   el.style.display = "block";
   el.innerHTML =
-    "<div class='card-title' style='margin-top:12px;'>Recent (this session)</div>" +
+    "<div style='font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px;'>Recent (this session)</div>" +
     recentScans.map(b =>
       "<div class='recent-item'>" +
         "<div class='recent-title'>" + b.title + "</div>" +
@@ -856,10 +1067,9 @@ function renderRecent() {
 }
 
 /* ================================================
-   BOOK LOOKUP — ISBN via Apps Script
+   BOOK LOOKUP
 ================================================ */
 async function fetchBook(isbn) {
-  // Source 1: Apps Script (Google Books + Open Library chain)
   setStatus("Looking up ISBN " + isbn + "...");
   try {
     const c1 = new AbortController();
@@ -867,32 +1077,43 @@ async function fetchBook(isbn) {
     const r1 = await fetch(SCRIPT_URL + "?isbn=" + isbn, { signal: c1.signal });
     clearTimeout(t1);
     const d1 = await r1.json();
-    if (d1.ok && d1.title) {
-      return { isbn: isbn, title: d1.title, author: d1.author, source: d1.source };
-    }
+    if (d1.ok && d1.title) return { isbn, title: d1.title, author: d1.author, source: d1.source };
   } catch(e1) {}
 
-  // Source 2: Open Library direct (in case Apps Script is slow)
   setStatus("Trying Open Library for " + isbn + "...");
   try {
     const c2 = new AbortController();
     const t2 = setTimeout(() => c2.abort(), FETCH_TIMEOUT_MS);
-    const r2 = await fetch(
-      "https://openlibrary.org/search.json?isbn=" + isbn + "&limit=1",
-      { signal: c2.signal }
-    );
+    const r2 = await fetch("https://openlibrary.org/search.json?isbn=" + isbn + "&limit=1", { signal: c2.signal });
     clearTimeout(t2);
     const d2 = await r2.json();
     if (d2.numFound > 0 && d2.docs && d2.docs[0]) {
       const doc = d2.docs[0];
-      return {
-        isbn:   isbn,
-        title:  doc.title || "Unknown Title",
-        author: doc.author_name ? doc.author_name[0] : "Unknown Author",
-        source: "Open Library"
-      };
+      return { isbn, title: doc.title || "Unknown Title", author: doc.author_name ? doc.author_name[0] : "Unknown Author", source: "Open Library" };
     }
   } catch(e2) {}
+
+  setStatus("Trying Open Library ISBN API for " + isbn + "...");
+  try {
+    const c3 = new AbortController();
+    const t3 = setTimeout(() => c3.abort(), FETCH_TIMEOUT_MS);
+    const r3 = await fetch("https://openlibrary.org/isbn/" + isbn + ".json", { signal: c3.signal });
+    clearTimeout(t3);
+    if (r3.ok) {
+      const d3 = await r3.json();
+      if (d3.title) {
+        let author = "Unknown Author";
+        if (d3.authors && d3.authors[0] && d3.authors[0].key) {
+          try {
+            const ar = await fetch("https://openlibrary.org" + d3.authors[0].key + ".json");
+            const ad = await ar.json();
+            author = ad.name || ad.personal_name || "Unknown Author";
+          } catch {}
+        }
+        return { isbn, title: d3.title, author, source: "Open Library ISBN" };
+      }
+    }
+  } catch(e3) {}
 
   return null;
 }
@@ -902,12 +1123,13 @@ async function fetchBook(isbn) {
 ================================================ */
 async function sendToSheet(data) {
   try {
-    const res = await fetch(SCRIPT_URL, {
+    await fetch(SCRIPT_URL, {
       method:  "POST",
-      headers: { "Content-Type": "application/json" },
+      mode:    "no-cors",
+      headers: { "Content-Type": "text/plain" },
       body:    JSON.stringify(data)
     });
-    return await res.json();
+    return { ok: true };
   } catch (e) {
     return { ok: false, error: e.message };
   }
@@ -921,7 +1143,7 @@ async function fetchAllData() {
   const json = await res.json();
   if (Array.isArray(json))                 return json;
   if (json.ok && Array.isArray(json.data)) return json.data;
-  throw new Error(json.error || "Unexpected response from sheet");
+  throw new Error(json.error || "Unexpected response");
 }
 
 /* ================================================
@@ -950,7 +1172,7 @@ async function searchBooks() {
       "</div>"
     ).join("");
   } catch (e) {
-    out.innerHTML = "<div class='empty-msg' style='color:var(--danger);'>Search failed. Make sure doGet is deployed in your Google Script.</div>";
+    out.innerHTML = "<div class='empty-msg' style='color:var(--danger);'>Search failed. Check your Google Script deployment.</div>";
   }
 }
 
@@ -963,15 +1185,30 @@ async function loadStats() {
   try {
     const data  = await fetchAllData();
     const boxes = {};
-    data.forEach(r => { if (r.boxId) boxes[r.boxId] = (boxes[r.boxId] || 0) + 1; });
-    const boxRows = Object.entries(boxes)
+    const rooms = {};
+    data.forEach(r => {
+      if (r.boxId) {
+        boxes[r.boxId] = (boxes[r.boxId] || 0) + 1;
+        const room = r.boxId.split("-")[0] || "Unknown";
+        if (!rooms[room]) rooms[room] = { count: 0, colorIndex: Object.keys(rooms).length };
+        rooms[room].count++;
+      }
+    });
+    const roomKeys  = Object.keys(rooms);
+    const boxRows   = Object.entries(boxes)
       .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([id, count]) =>
-        "<div class='box-stat-row'>" +
-          "<span class='box-stat-id'>" + id + "</span>" +
+      .map(([id, count]) => {
+        const room      = id.split("-")[0] || "Unknown";
+        const colorIdx  = roomKeys.indexOf(room) % ROOM_COLORS.length;
+        const dotClass  = ROOM_COLORS[colorIdx];
+        return "<div class='box-stat-row'>" +
+          "<div class='box-stat-left'>" +
+            "<div class='box-stat-dot " + dotClass + "'></div>" +
+            "<span class='box-stat-id'>" + id + "</span>" +
+          "</div>" +
           "<span class='box-stat-count'>" + count + " book" + (count !== 1 ? "s" : "") + "</span>" +
-        "</div>"
-      ).join("");
+        "</div>";
+      }).join("");
     out.innerHTML =
       "<div class='stat-total'>" + data.length + "<span>total books</span></div>" +
       (boxRows || "<div class='empty-msg'>No boxes yet.</div>");
@@ -981,24 +1218,41 @@ async function loadStats() {
 }
 
 /* ================================================
-   QR GENERATOR — rooms, categories, bin#, print, history
+   EXPORT CSV
 ================================================ */
+async function exportCSV() {
+  try {
+    showToast("Preparing export...", 3000);
+    const data = await fetchAllData();
+    if (data.length === 0) { showToast("No data to export"); return; }
+    const headers = ["Timestamp","Box ID","Category","Box Number","ISBN","Title","Author","Notes"];
+    const rows    = data.map(r => [
+      r.timestamp, r.boxId, r.category, r.boxNumber,
+      r.isbn, '"' + (r.title  || "").replace(/"/g, '""') + '"',
+               '"' + (r.author || "").replace(/"/g, '""') + '"',
+               '"' + (r.notes  || "").replace(/"/g, '""') + '"'
+    ].join(","));
+    const csv  = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = "move-inventory-" + new Date().toISOString().split("T")[0] + ".csv";
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("CSV exported!");
+  } catch (e) {
+    showToast("Export failed");
+  }
+}
 
-const QR_DEFAULTS = {
-  rooms:      ["Storage", "Donation", "Master Bedroom"],
-  categories: ["Books"]
-};
-const QR_RECENT_MAX = 5;
-
-let qrRooms      = [];
-let qrCategories = [];
-let qrRecentList = [];
-let addItemType  = "";  // "room" or "category"
-
+/* ================================================
+   QR GENERATOR
+================================================ */
 function loadQRLists() {
   try {
-    qrRooms      = JSON.parse(localStorage.getItem("qrRooms"))      || QR_DEFAULTS.rooms;
-    qrCategories = JSON.parse(localStorage.getItem("qrCategories")) || QR_DEFAULTS.categories;
+    qrRooms      = JSON.parse(localStorage.getItem("qrRooms"))      || QR_DEFAULTS.rooms.slice();
+    qrCategories = JSON.parse(localStorage.getItem("qrCategories")) || QR_DEFAULTS.categories.slice();
     qrRecentList = JSON.parse(localStorage.getItem("qrRecent"))     || [];
   } catch {
     qrRooms      = QR_DEFAULTS.rooms.slice();
@@ -1020,46 +1274,37 @@ function renderQRDropdowns() {
   const catSel  = document.getElementById("qrCat");
   const roomVal = roomSel.value;
   const catVal  = catSel.value;
-
-  roomSel.innerHTML = qrRooms.map(r =>
-    "<option value='" + r + "'>" + r + "</option>"
-  ).join("");
-  catSel.innerHTML = qrCategories.map(c =>
-    "<option value='" + c + "'>" + c + "</option>"
-  ).join("");
-
+  roomSel.innerHTML = qrRooms.map(r => "<option value='" + r + "'>" + r + "</option>").join("");
+  catSel.innerHTML  = qrCategories.map(c => "<option value='" + c + "'>" + c + "</option>").join("");
   if (roomVal) roomSel.value = roomVal;
   if (catVal)  catSel.value  = catVal;
 }
 
 function showAddItem(type) {
   addItemType = type;
-  document.getElementById("addItemTitle").textContent =
-    "Add new " + (type === "room" ? "room" : "category");
+  document.getElementById("addItemTitle").textContent = "Add new " + (type === "room" ? "room" : "category");
   document.getElementById("addItemInput").value = "";
-  document.getElementById("addItemModal").style.display = "flex";
+  document.getElementById("addItemModal").classList.add("open");
   setTimeout(() => document.getElementById("addItemInput").focus(), 100);
 }
 
 function hideAddItem() {
-  document.getElementById("addItemModal").style.display = "none";
+  document.getElementById("addItemModal").classList.remove("open");
   addItemType = "";
 }
 
 function confirmAddItem() {
   const val = document.getElementById("addItemInput").value.trim();
   if (!val) { showToast("Enter a name"); return; }
-
   if (addItemType === "room") {
-    if (!qrRooms.includes(val)) { qrRooms.push(val); }
+    if (!qrRooms.includes(val)) qrRooms.push(val);
     renderQRDropdowns();
     document.getElementById("qrRoom").value = val;
   } else {
-    if (!qrCategories.includes(val)) { qrCategories.push(val); }
+    if (!qrCategories.includes(val)) qrCategories.push(val);
     renderQRDropdowns();
     document.getElementById("qrCat").value = val;
   }
-
   saveQRLists();
   hideAddItem();
   showToast(val + " added");
@@ -1086,46 +1331,34 @@ function changeBin(delta) {
   el.value  = Math.max(1, val + delta);
 }
 
-function getQRValue() {
+function makeQR() {
   const room = document.getElementById("qrRoom").value.trim();
   const cat  = document.getElementById("qrCat").value.trim().toUpperCase();
   const bin  = document.getElementById("qrBin").value.trim();
-  return { room, cat, bin, value: room + "-" + cat + "-" + bin };
-}
-
-function makeQR() {
-  const { room, cat, bin, value } = getQRValue();
   if (!room || !cat || !bin) { showToast("Fill in all fields"); return; }
+  const value = room + "-" + cat + "-" + bin;
 
-  const preview = document.getElementById("qrPreview");
-  preview.style.display = "block";
-
+  document.getElementById("qrPreview").style.display = "block";
   QRCode.toCanvas(document.getElementById("qr"), value, { width: 280 }, () => {
     document.getElementById("qrLabelText").innerHTML =
-      "<span class='label-room'>"     + room + "</span>" +
-      "<span class='label-category'>" + cat  + "</span>" +
-      "<span class='label-bin'>Bin "  + bin  + "</span>";
+      "<span class='label-room'>"     + room        + "</span>" +
+      "<span class='label-category'>" + cat         + "</span>" +
+      "<span class='label-bin'>Bin "  + bin         + "</span>";
   });
 
-  // Add to recent
   qrRecentList = qrRecentList.filter(r => r.value !== value);
   qrRecentList.unshift({ room, cat, bin, value });
   if (qrRecentList.length > QR_RECENT_MAX) qrRecentList.pop();
   saveQRLists();
   renderRecentQR();
-
   showToast("QR generated for " + value);
 }
 
-function makeQRNext() {
-  changeBin(1);
-  makeQR();
-}
+function makeQRNext() { changeBin(1); makeQR(); }
 
 function renderRecentQR() {
   const el = document.getElementById("recentQR");
   if (qrRecentList.length === 0) { el.style.display = "none"; return; }
-
   el.style.display = "block";
   document.getElementById("recentQRList").innerHTML = qrRecentList.map((r, i) =>
     "<div class='recent-qr-item'>" +
@@ -1138,32 +1371,39 @@ function renderRecentQR() {
 function reprintQR(index) {
   const r = qrRecentList[index];
   if (!r) return;
-
   document.getElementById("qrRoom").value = r.room;
   document.getElementById("qrCat").value  = r.cat;
   document.getElementById("qrBin").value  = r.bin;
   makeQR();
-  window.scrollTo(0, document.getElementById("qrPreview").offsetTop);
 }
 
 function printQR() {
   const canvas  = document.getElementById("qr");
-  const label   = document.getElementById("qrLabelText").innerHTML;
   const dataUrl = canvas.toDataURL();
+  const room    = document.getElementById("qrRoom").value;
+  const cat     = document.getElementById("qrCat").value.toUpperCase();
+  const bin     = document.getElementById("qrBin").value;
+  const roomSz  = getComputedStyle(document.documentElement).getPropertyValue("--lbl-room-size").trim();
+  const catSz   = getComputedStyle(document.documentElement).getPropertyValue("--lbl-category-size").trim();
+  const binSz   = getComputedStyle(document.documentElement).getPropertyValue("--lbl-bin-size").trim();
 
   const win = window.open("", "_blank");
   win.document.write(
     "<html><head><title>Box Label</title>" +
     "<style>" +
-    "  body { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; margin:0; font-family:monospace; }" +
-    "  img  { width:300px; height:300px; }" +
-    "  .lbl { text-align:center; margin-top:12px; line-height:1.6; }" +
-    "  .room { font-size:26px; font-weight:bold; color:#1a2e5a; display:block; margin-bottom:4px; }" +
-    "  .cat  { font-size:14px; color:#666; text-transform:uppercase; letter-spacing:0.1em; display:block; margin-bottom:8px; }" +
-    "  .bin  { font-size:48px; font-weight:bold; color:#1a2e5a; display:block; border-top:1.5px solid #dde2ed; padding-top:8px; margin-top:4px; }" +
+    "body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:monospace;}" +
+    "img{width:300px;height:300px;}" +
+    ".lbl{text-align:center;margin-top:14px;line-height:1.5;}" +
+    ".room{font-size:" + roomSz + ";font-weight:bold;color:#1a2e5a;display:block;}" +
+    ".cat{font-size:" + catSz + ";color:#666;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-top:4px;}" +
+    ".bin{font-size:" + binSz + ";font-weight:bold;color:#1a2e5a;display:block;border-top:1.5px solid #dde2ed;padding-top:8px;margin-top:6px;}" +
     "</style></head><body>" +
     "<img src='" + dataUrl + "' />" +
-    "<div class='lbl'>" + label.replace("label-room", "room").replace("label-category", "cat").replace("label-bin", "bin") + "</div>" +
+    "<div class='lbl'>" +
+      "<span class='room'>" + room + "</span>" +
+      "<span class='cat'>"  + cat  + "</span>" +
+      "<span class='bin'>Bin " + bin + "</span>" +
+    "</div>" +
     "<script>window.onload=function(){window.print();window.close();}<\/script>" +
     "</body></html>"
   );
@@ -1175,11 +1415,11 @@ function printQR() {
 ================================================ */
 function unlockBox() {
   activeBox = ""; activeCategory = ""; activeBoxNumber = "";
-  const el = document.getElementById("activeBox");
-  el.textContent = "No box selected";
-  el.className = "";
+  document.getElementById("activeBox").textContent = "No box selected";
+  document.getElementById("activeBox").className   = "";
   setStatus("");
   document.getElementById("lastScanned").style.display = "none";
+  updateBanner();
   showToast("Box unlocked");
 }
 
@@ -1189,13 +1429,13 @@ function unlockBox() {
 function pause(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 /* ================================================
-   KEYBOARD SHORTCUTS
+   INIT
 ================================================ */
 document.addEventListener("DOMContentLoaded", () => {
+  loadTheme();
+  loadSettings();
   loadQRLists();
-  document.getElementById("addItemInput").addEventListener("keydown", e => {
-    if (e.key === "Enter") confirmAddItem();
-  });
+
   document.getElementById("manualIsbn").addEventListener("keydown", e => {
     if (e.key === "Enter") submitManualIsbn();
   });
@@ -1211,8 +1451,15 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("manualAuthor").addEventListener("keydown", e => {
     if (e.key === "Enter") submitManualEntry();
   });
+  document.getElementById("addItemInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") confirmAddItem();
+  });
+
+  // Close settings when tapping backdrop
+  document.getElementById("settingsPanel").addEventListener("click", e => {
+    if (e.target === document.getElementById("settingsPanel")) closeSettings();
+  });
 });
 </script>
-
 </body>
 </html>
