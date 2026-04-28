@@ -652,8 +652,7 @@ async function saveBook(isbn, title, author, notes, source) {
 
   if (!result.ok) {
     setStatus("Save failed: " + (result.error || "unknown"), "err");
-    showToast("Save failed: " + JSON.stringify(result), 5000);    return;
-  }
+    showToast("Save failed");  }
 
   const ls = document.getElementById("lastScanned");
   ls.style.display = "block";
