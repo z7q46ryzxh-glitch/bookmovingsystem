@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>Move Inventory Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/html5-qrcode"></script>
@@ -230,6 +230,40 @@ input[type="range"]{width:100%;height:6px;border-radius:3px;accent-color:var(--b
 #toast{display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 20px;border-radius:99px;font-size:14px;font-weight:600;z-index:999;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.2);}
 
 .empty-msg{color:var(--muted);font-size:13px;font-style:italic;}
+
+/* Series editor */
+.series-editor{display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-top:8px;}
+.series-editor.open{display:block;}
+.series-editor-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;}
+.series-editor-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-bottom:8px;}
+.series-editor-row input{margin-bottom:0;}
+.series-editor-pos{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+/* Series badge */
+.series-badge{display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--border);border-radius:99px;padding:3px 10px;font-size:11px;color:var(--blue);font-family:var(--mono);margin-top:5px;}
+.series-badge.standalone{color:var(--muted);border-color:var(--border);}
+.series-pos{font-weight:600;background:var(--blue);color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;}
+.series-pos.standalone{background:var(--muted);}
+
+/* Series completeness */
+.series-group{margin-bottom:14px;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
+.series-group-header{background:var(--bg);padding:8px 12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+.series-group-title{font-weight:600;font-size:13px;color:var(--navy);}
+.series-group-meta{font-size:11px;color:var(--muted);font-family:var(--mono);}
+.series-volumes{padding:8px 12px;}
+.series-vol-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;border-bottom:1px solid var(--border);}
+.series-vol-row:last-child{border-bottom:none;}
+.series-vol-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;}
+.series-vol-num.have{background:var(--success-bg);color:var(--success);border:1px solid #a8dfc0;}
+.series-vol-num.missing{background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger);opacity:.7;}
+.series-vol-info{flex:1;}
+.series-vol-title{font-weight:600;}
+.series-vol-author{font-size:11px;color:var(--muted);}
+.series-vol-box{font-size:11px;font-family:var(--mono);color:var(--blue);}
+.series-gap-label{font-size:11px;color:var(--danger);font-style:italic;}
+.series-tab-row{display:flex;gap:6px;margin-bottom:12px;}
+.series-tab{padding:6px 14px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;}
+.series-tab.active{background:var(--blue);color:#fff;border-color:var(--blue);}
 .dot-0{background:#3a6fd8}.dot-1{background:#1d8a4e}.dot-2{background:#e67e22}.dot-3{background:#8e44ad}.dot-4{background:#c0392b}.dot-5{background:#16a085}.dot-6{background:#d4ac0d}.dot-7{background:#2c3e50}
 </style>
 </head>
@@ -253,6 +287,9 @@ input[type="range"]{width:100%;height:6px;border-radius:3px;accent-color:var(--b
     <button class="banner-unlock" onclick="unlockBox()">🔓 Unlock</button>
   </div>
 </div>
+
+<!-- Weight warning banner -->
+<div id="weightWarningBar" style="display:none;position:sticky;top:100px;z-index:39;padding:10px 16px;font-size:13px;font-weight:600;text-align:center;letter-spacing:.02em;cursor:pointer;" onclick="dismissWeightWarning()"></div>
 
 <div class="page">
 
@@ -295,6 +332,7 @@ input[type="range"]{width:100%;height:6px;border-radius:3px;accent-color:var(--b
           <input type="number" id="manualIsbn" placeholder="Or enter ISBN manually" />
           <button class="btn btn-secondary" style="width:auto;padding:10px 14px;margin:0;" onclick="submitManualIsbn()">→</button>
         </div>
+        <button class="btn btn-secondary" style="font-size:13px;margin-top:2px;" onclick="showManualSearch()">🔍 No barcode? Search by title</button>
       </div>
 
       <!-- Unpack mode controls -->
@@ -313,6 +351,17 @@ input[type="range"]{width:100%;height:6px;border-radius:3px;accent-color:var(--b
 
       <div id="scanStatus"></div>
       <div id="reader"></div>
+
+      <!-- Series editor (shown on last scanned card) -->
+      <div class="series-editor" id="seriesEditor">
+        <div class="series-editor-title">Edit Series Info</div>
+        <input type="text" id="seriesEditorName" placeholder="Series name (or Stand-alone)" style="margin-bottom:8px;" />
+        <div class="series-editor-row">
+          <input type="text" id="seriesEditorPos" placeholder="Position (1,2,3... or X)" style="margin-bottom:0;" />
+          <button class="btn btn-primary btn-sm" style="width:auto;" onclick="saveSeriesEdit()">Save</button>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="width:auto;margin-top:4px;" onclick="closeSeriesEditor()">Cancel</button>
+      </div>
 
       <!-- Dupe warning -->
       <div id="dupePanel">
@@ -378,6 +427,23 @@ input[type="range"]{width:100%;height:6px;border-radius:3px;accent-color:var(--b
         <button class="btn btn-secondary" onclick="recalcBinWeights()">⚖️ Recalc Weights</button>
         <button class="btn btn-secondary" onclick="generateReport()">📄 Move Report</button>
       </div>
+    </div>
+  </div>
+
+  <!-- SERIES -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard('seriesCard')">
+      <div class="card-title-row"><span class="card-icon">📖</span><span class="card-title">Series Completeness</span></div>
+      <span class="card-chevron" id="seriesCardChevron">▼</span>
+    </div>
+    <div class="card-body collapsed" id="seriesCard">
+      <div class="series-tab-row">
+        <button class="series-tab active" id="tabAllSeries"  onclick="setSeriesTab('all')">All Series</button>
+        <button class="series-tab"        id="tabGaps"       onclick="setSeriesTab('gaps')">Has Gaps</button>
+        <button class="series-tab"        id="tabStandalone" onclick="setSeriesTab('standalone')">Stand-alone</button>
+      </div>
+      <div id="seriesContent"><span class="empty-msg">Tap refresh to load.</span></div>
+      <button class="btn btn-secondary" style="margin-top:10px;" onclick="loadSeriesData()">↻ Refresh</button>
     </div>
   </div>
 
@@ -474,13 +540,33 @@ input[type="range"]{width:100%;height:6px;border-radius:3px;accent-color:var(--b
   </div>
 </div>
 
+<!-- SERIES EDITOR MODAL -->
+<div id="seriesModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center;">
+  <div class="modal-box" style="max-width:360px;">
+    <div class="modal-title" id="seriesModalTitle">Edit Series</div>
+    <input type="hidden" id="seriesIsbn" />
+    <label class="field-label">Series Name</label>
+    <input type="text" id="seriesNameInput" placeholder="e.g. George Smiley Series, or Stand-alone" style="margin-bottom:8px;" />
+    <label class="field-label">Position in Series</label>
+    <input type="text" id="seriesPosInput" placeholder="e.g. 5, or X for stand-alone" style="margin-bottom:12px;" />
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">
+      Use <b>Stand-alone</b> / <b>X</b> for non-series books.<br>
+      Use <b>Unknown</b> / <b>?</b> if series is unknown.
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary"   onclick="saveSeriesOverride()">💾 Save</button>
+      <button class="btn btn-secondary" onclick="closeSeriesEditor()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
 /* ================================================
    CONFIG
 ================================================ */
-const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbyaHZNNkPRlH5paIWFSuB2E6NrCsPXcPIpOlYSaGnBUcDa9T5DKIif171gmQwEasPLVug/exec";
+const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycby5plsNEtBfJ5aZH_INjxxIjMwPDOepVAZetIEjffDKROTYTgJth4ayulMoKgEBjiD93g/exec";
 const FETCH_TIMEOUT_MS = 6000;
 const SCAN_COOLDOWN_MS = 1500;
 const MAX_RECENT       = 8;
@@ -509,18 +595,59 @@ let scanMode        = "scan"; // "scan" or "unpack"
 let wcHC=1.5, wcPB=0.5, wcUK=1.0, wcLimit=30.0;
 
 /* ================================================
+   FORMAT NORMALIZATION
+================================================ */
+function normalizeFormat(raw) {
+  if (!raw) return "";
+  const s = raw.toLowerCase().trim();
+  if (s.includes("hardcover") || s.includes("hard cover") || s.includes("hardback") || s === "hc") return "Hardcover";
+  if (s.includes("paperback") || s.includes("paper back") || s.includes("softcover") || s.includes("soft cover") || s.includes("mass market") || s === "pb") return "Paperback";
+  if (s.includes("ebook") || s.includes("e-book") || s.includes("kindle") || s.includes("digital")) return "eBook";
+  if (s.includes("audio")) return "Audiobook";
+  return raw; // keep original if unrecognized
+}
+
+/* ================================================
    FEEDBACK
 ================================================ */
 function beep(){try{const c=new(window.AudioContext||window.webkitAudioContext)();const o=c.createOscillator();o.connect(c.destination);o.start();setTimeout(()=>o.stop(),80);}catch{}}
 function vibrate(){if(navigator.vibrate)navigator.vibrate(80);}
 let toastTimer=null;
 function showToast(msg,duration=2200){const t=document.getElementById("toast");t.textContent=msg;t.style.display="block";clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.style.display="none";},duration);}
-function setStatus(msg,type=""){const el=document.getElementById("scanStatus");el.textContent=msg;el.className=type;}
+function setStatus(msg,type=""){
+  const el=document.getElementById("scanStatus");
+  el.textContent=msg;el.className=type;
+  if(msg){
+    // Scroll so status line is near top of viewport
+    setTimeout(()=>{
+      const rect=el.getBoundingClientRect();
+      const offset=rect.top+window.scrollY-70; // 70px = header+banner height
+      if(offset>0)window.scrollTo({top:offset,behavior:"smooth"});
+    },100);
+  }
+}
 
 /* ================================================
    COLLAPSIBLE CARDS
 ================================================ */
-function toggleCard(id){const body=document.getElementById(id);const chevron=document.getElementById(id+"Chevron");const collapsed=body.classList.toggle("collapsed");if(chevron)chevron.classList.toggle("open",!collapsed);}
+function toggleCard(id){
+  const body=document.getElementById(id);
+  const chevron=document.getElementById(id+"Chevron");
+  const willOpen=body.classList.contains("collapsed");
+  // If opening, collapse all other cards first
+  if(willOpen){
+    const allCards=["boxCard","scanCard","searchCard","statsCard","qrCard"];
+    allCards.forEach(cid=>{
+      if(cid!==id){
+        const b=document.getElementById(cid);
+        const c=document.getElementById(cid+"Chevron");
+        if(b&&!b.classList.contains("collapsed")){b.classList.add("collapsed");if(c)c.classList.remove("open");}
+      }
+    });
+  }
+  body.classList.toggle("collapsed",!willOpen);
+  if(chevron)chevron.classList.toggle("open",willOpen);
+}
 
 /* ================================================
    THEME
@@ -699,7 +826,7 @@ async function processIsbn(isbn){
     document.getElementById("titleSearchInput").focus();return;
   }
   pendingBook=book;
-  await saveBook(book.isbn,book.title,book.author,book.synopsis||"",book.format||"",book.source);
+  await confirmAndSave(book.isbn,book.title,book.author,book.synopsis||"",book.format||"",book.source,book.seriesName||"Unknown",book.seriesPosition||"?");
 }
 
 /* ================================================
@@ -714,7 +841,7 @@ function showDupeWarning(title,author,isbn){
 async function saveDupeAnyway(){
   document.getElementById("dupePanel").style.display="none";
   if(!pendingBook){const book=await fetchBook(pendingIsbn);pendingBook=book||{isbn:pendingIsbn,title:"Unknown",author:"Unknown",synopsis:"",format:"",source:"manual"};}
-  await saveBook(pendingBook.isbn,pendingBook.title,pendingBook.author,pendingBook.synopsis||"",pendingBook.format||"",pendingBook.source);
+  await confirmAndSave(pendingBook.isbn,pendingBook.title,pendingBook.author,pendingBook.synopsis||"",pendingBook.format||"",pendingBook.source,pendingBook.seriesName||"Unknown",pendingBook.seriesPosition||"?");
   pendingBook=null;scanLock=false;
 }
 function dismissDupe(){document.getElementById("dupePanel").style.display="none";pendingIsbn="";pendingBook=null;scanLock=false;setStatus("Ready — scan next book.");}
@@ -739,7 +866,8 @@ async function searchByTitle(){
 }
 function selectTitleResult(index){
   const book=window._titleResults[index];if(!book)return;
-  saveBook(book.isbn||pendingIsbn,book.title,book.author,book.synopsis||"",book.format||"","Open Library (title search)");
+  const fmt=normalizeFormat(book.format||"");
+  confirmAndSave(book.isbn||pendingIsbn,book.title,book.author,book.synopsis||"",fmt,"Open Library (title search)","Unknown","?");
   dismissNotFound();
 }
 
@@ -752,7 +880,7 @@ async function submitManualEntry(){
   const isbn=document.getElementById("manualIsbnConfirm").value.trim();
   if(!title){showToast("Please enter a title");return;}
   if(!activeBox){showToast("No active box");return;}
-  await saveBook(isbn||pendingIsbn,title,author||"Unknown Author","","","manual");
+  await saveBook(isbn||pendingIsbn,title,author||"Unknown Author","","","manual","Unknown","?");
   dismissNotFound();
 }
 function dismissNotFound(){
@@ -765,34 +893,64 @@ function dismissNotFound(){
   pendingIsbn="";scanLock=false;setStatus("Ready — scan next book.");
 }
 
+function showManualSearch(){
+  if(!activeBox){showToast("Scan a box QR code first");return;}
+  stopScan();
+  pendingIsbn="";
+  document.getElementById("notFoundPanel").style.display="block";
+  document.getElementById("notFoundPanel").querySelector(".panel-title").textContent="🔍 Search by title or author";
+  document.getElementById("manualIsbnConfirm").value="";
+  document.getElementById("titleSearchInput").value="";
+  document.getElementById("titleSearchResults").innerHTML="";
+  document.getElementById("manualTitle").value="";
+  document.getElementById("manualAuthor").value="";
+  scanLock=true;
+  setTimeout(()=>document.getElementById("titleSearchInput").focus(),100);
+}
+
 /* ================================================
    SAVE BOOK
 ================================================ */
-async function saveBook(isbn,title,author,synopsis,format,source){
+async function saveBook(isbn,title,author,synopsis,format,source,seriesName,seriesPosition){
   setStatus("Saving to sheet...");
   const result=await sendToSheet({
     boxId:activeBox,category:activeCategory,boxNumber:activeBoxNumber,
     isbn,title,author,notes:"",format:format||"",synopsis:synopsis||"",
+    seriesName:seriesName||"",seriesPosition:seriesPosition||"",
     hcWeight:wcHC,pbWeight:wcPB,ukWeight:wcUK,safeLimit:wcLimit
   });
+  result.seriesName=seriesName||"";result.seriesPosition=seriesPosition||"";
   if(!result.ok){setStatus("Save failed","err");showToast("Save failed");return;}
   if(result.weightResult){currentBinWeight=result.weightResult;updateBanner();checkWeightWarning(result.weightResult);}
 
   const fmtLabel=format?" · "+format:"";
   const ls=document.getElementById("lastScanned");
   ls.style.display="block";
+
+  // Series badge
+  let seriesBadgeHtml="";
+  if(seriesName&&seriesName!==""){
+    if(seriesName==="Stand-alone"){
+      seriesBadgeHtml="<div id=\'seriesBadge\'><span class=\'series-badge standalone\'><span class=\'series-pos standalone\'>—</span>Stand-alone</span></div>";
+    }else{
+      seriesBadgeHtml="<div id=\'seriesBadge\'><span class=\'series-badge\'><span class=\'series-pos\'>"+(seriesPosition||"?")+"</span>"+seriesName+"</span></div>";
+    }
+  }
+
   ls.innerHTML=
-    "<div class='book-title'>✅ "+title+"</div>"+
-    "<div class='book-meta'>"+author+fmtLabel+"</div>"+
-    (synopsis?"<div class='book-synopsis'>"+synopsis.substring(0,180)+(synopsis.length>180?"…":"")+"</div>":"")+
-    (result.weightResult?"<div class='book-weight'>📦 ~"+result.weightResult.estWeight.toFixed(1)+" lbs ("+result.weightResult.pctFull+"% full) · "+result.weightResult.hc+" HC / "+result.weightResult.pb+" PB / "+result.weightResult.uk+" unknown</div>":"")+
-    "<div class='book-actions'>"+
-      "<button class='action-btn danger' onclick='undoLastScan(\""+isbn+"\")'>↩ Undo</button>"+
-      "<button class='action-btn' id='fmtHC' onclick='correctFormat(\""+isbn+"\",\"Hardcover\")'>HC</button>"+
-      "<button class='action-btn' id='fmtPB' onclick='correctFormat(\""+isbn+"\",\"Paperback\")'>PB</button>"+
-      "<button class='action-btn' onclick='flagSynopsis(\""+isbn+"\")'>👎 Synopsis</button>"+
+    "<div class=\'book-title\'>✅ "+title+"</div>"+
+    "<div class=\'book-meta\'>"+author+fmtLabel+"</div>"+
+    seriesBadgeHtml+
+    (synopsis?"<div class=\'book-synopsis\'>"+synopsis.substring(0,180)+(synopsis.length>180?"…":"")+"</div>":"")+
+    (result.weightResult?"<div class=\'book-weight\'>📦 ~"+result.weightResult.estWeight.toFixed(1)+" lbs ("+result.weightResult.pctFull+"% full) · "+result.weightResult.hc+" HC / "+result.weightResult.pb+" PB / "+result.weightResult.uk+" unknown</div>":"")+
+    "<div class=\'book-actions\'>"+
+      "<button class=\'action-btn danger\' onclick=\'undoLastScan(\""+isbn+"\")\'>↩ Undo</button>"+
+      "<button class=\'action-btn\' id=\'fmtHC\' onclick=\'correctFormat(\""+isbn+"\",\"Hardcover\")\'>HC</button>"+
+      "<button class=\'action-btn\' id=\'fmtPB\' onclick=\'correctFormat(\""+isbn+"\",\"Paperback\")\'>PB</button>"+
+      "<button class=\'action-btn\' onclick=\'flagSynopsis(\""+isbn+"\")\'>👎 Synopsis</button>"+
+      "<button class=\'action-btn\' onclick=\'openSeriesEditor(\""+isbn+"\",\""+encodeURIComponent(seriesName||"")+"\",\""+encodeURIComponent(seriesPosition||"")+"\")\'>📖 Series</button>"+
     "</div>"+
-    (source?"<div class='book-meta' style='font-size:11px;margin-top:4px;opacity:.6;'>via "+source+"</div>":"");
+    (source?"<div class=\'book-meta\' style=\'font-size:11px;margin-top:4px;opacity:.6;\'>via "+source+"</div>":"");margin-top:4px;opacity:.6;'>via "+source+"</div>":"");
 
   // Highlight current format button
   if(format){
@@ -801,7 +959,7 @@ async function saveBook(isbn,title,author,synopsis,format,source){
     if(fmtLow.indexOf("paper")>=0||fmtLow.indexOf("soft")>=0)document.getElementById("fmtPB")&&document.getElementById("fmtPB").classList.add("active");
   }
 
-  recentScans.unshift({title,author,boxId:activeBox,isbn,format});
+  recentScans.unshift({title,author,boxId:activeBox,isbn,format,seriesName:seriesName||"",seriesPosition:seriesPosition||""});
   if(recentScans.length>MAX_RECENT)recentScans.pop();
   renderRecent();showToast("✅ Saved!");setStatus("Ready — scan next book.","ok");
 }
@@ -858,10 +1016,52 @@ async function flagSynopsis(isbn){
 /* ================================================
    WEIGHT WARNING
 ================================================ */
+let weightWarningDismissed = 0; // track which threshold was dismissed
+
 function checkWeightWarning(wr){
   if(!wr)return;
-  if(wr.pctFull>=95)showToast("🔴 STOP — bin is at "+wr.pctFull+"% weight limit!",4000);
-  else if(wr.pctFull>=80)showToast("🟡 Heads up — bin is at "+wr.pctFull+"% weight limit",3000);
+  const pct=wr.pctFull;
+  const bar=document.getElementById("weightWarningBar");
+
+  if(pct>=100){
+    bar.style.display="block";
+    bar.style.background="#c0392b";bar.style.color="#fff";
+    bar.innerHTML="🔴 BIN IS FULL ("+pct+"%) — tap to acknowledge and continue";
+    bar.onclick=()=>dismissWeightWarning();
+    // Also require explicit confirmation for each new book over 100%
+    weightWarningDismissed=0; // reset so it shows every scan
+  } else if(pct>=95&&weightWarningDismissed<95){
+    bar.style.display="block";
+    bar.style.background="#e74c3c";bar.style.color="#fff";
+    bar.innerHTML="🟠 95% full ("+wr.estWeight.toFixed(1)+" lbs) — tap to dismiss";
+    bar.onclick=()=>dismissWeightWarning(95);
+  } else if(pct>=90&&weightWarningDismissed<90){
+    bar.style.display="block";
+    bar.style.background="#f0c040";bar.style.color="#000";
+    bar.innerHTML="🟡 90% full ("+wr.estWeight.toFixed(1)+" lbs) — tap to dismiss";
+    bar.onclick=()=>dismissWeightWarning(90);
+  } else if(pct<90){
+    bar.style.display="none";
+  }
+}
+
+function dismissWeightWarning(threshold){
+  if(threshold)weightWarningDismissed=threshold;
+  const bar=document.getElementById("weightWarningBar");
+  bar.style.display="none";
+}
+
+async function confirmAndSave(isbn,title,author,synopsis,format,source,seriesName,seriesPosition){
+  const pct=currentBinWeight?currentBinWeight.pctFull:0;
+  if(pct>=100){
+    const ok=confirm("⚠️ This bin is at "+pct+"% capacity ("+currentBinWeight.estWeight.toFixed(1)+" lbs).
+
+Add ""+title+"" anyway?
+
+(Tip: start a new bin to keep the bin under the weight limit.)");
+    if(!ok){setStatus("Book skipped — start a new bin.","warn");scanLock=false;return;}
+  }
+  await saveBook(isbn,title,author,synopsis,format,source,seriesName,seriesPosition);
 }
 
 /* ================================================
@@ -872,25 +1072,149 @@ function renderRecent(){
   if(recentScans.length===0){el.style.display="none";return;}
   el.style.display="block";
   el.innerHTML="<div style='font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px;'>Recent (this session)</div>"+
-    recentScans.map(b=>"<div class='recent-item'><div class='recent-title'>"+b.title+(b.format?" <span style='font-size:11px;color:var(--muted);'>("+b.format+")</span>":"")+"</div><div class='recent-meta'>"+b.author+" · "+b.boxId+" · "+b.isbn+"</div></div>").join("");
+    recentScans.map(b=>{
+      let sInfo="";
+      if(b.seriesName&&b.seriesName!==""&&b.seriesName!=="Stand-alone"){
+        sInfo=" <span style='font-size:10px;color:var(--blue);'>#"+(b.seriesPosition||"?")+" "+b.seriesName+"</span>";
+      }
+      return "<div class='recent-item'><div class='recent-title'>"+b.title+(b.format?" <span style='font-size:11px;color:var(--muted);'>("+b.format+")</span>":"")+sInfo+"</div><div class='recent-meta'>"+b.author+" · "+b.boxId+" · "+b.isbn+"</div></div>";
+    }).join("");
 }
 
 /* ================================================
    BOOK LOOKUP
 ================================================ */
-async function fetchBook(isbn){
+async function fetchBook(isbn) {
   setStatus("Looking up ISBN "+isbn+"...");
-  try{const c1=new AbortController();const t1=setTimeout(()=>c1.abort(),FETCH_TIMEOUT_MS);const r1=await fetch(SCRIPT_URL+"?isbn="+isbn,{signal:c1.signal});clearTimeout(t1);const d1=await r1.json();if(d1.ok&&d1.title)return{isbn,title:d1.title,author:d1.author,format:d1.format||"",synopsis:d1.synopsis||"",source:d1.source};}catch{}
-  setStatus("Trying Open Library for "+isbn+"...");
-  try{const c2=new AbortController();const t2=setTimeout(()=>c2.abort(),FETCH_TIMEOUT_MS);const r2=await fetch("https://openlibrary.org/search.json?isbn="+isbn+"&limit=1",{signal:c2.signal});clearTimeout(t2);const d2=await r2.json();if(d2.numFound>0&&d2.docs&&d2.docs[0]){const doc=d2.docs[0];const syn=doc.first_sentence?(typeof doc.first_sentence==="string"?doc.first_sentence:(doc.first_sentence.value||"")):"";return{isbn,title:doc.title||"Unknown Title",author:doc.author_name?doc.author_name[0]:"Unknown Author",format:doc.physical_format_simple?doc.physical_format_simple[0]:"",synopsis:syn,source:"Open Library"};}}catch{}
-  setStatus("Trying Open Library ISBN API for "+isbn+"...");
-  try{const c3=new AbortController();const t3=setTimeout(()=>c3.abort(),FETCH_TIMEOUT_MS);const r3=await fetch("https://openlibrary.org/isbn/"+isbn+".json",{signal:c3.signal});clearTimeout(t3);if(r3.ok){const d3=await r3.json();if(d3.title){let author="Unknown Author";if(d3.authors&&d3.authors[0]&&d3.authors[0].key){try{const ar=await fetch("https://openlibrary.org"+d3.authors[0].key+".json");const ad=await ar.json();author=ad.name||ad.personal_name||"Unknown Author";}catch{}}const fmt=d3.physical_format||"";const syn=d3.description?(typeof d3.description==="string"?d3.description:(d3.description.value||"")):"";return{isbn,title:d3.title,author,format:fmt,synopsis:syn.substring(0,300),source:"Open Library ISBN"};}}}catch{}
-  return null;
+
+  // Source 1: Apps Script (Open Library chain server-side)
+  let scriptResult = null;
+  try {
+    const c1=new AbortController();const t1=setTimeout(()=>c1.abort(),FETCH_TIMEOUT_MS);
+    const r1=await fetch(SCRIPT_URL+"?isbn="+isbn,{signal:c1.signal});
+    clearTimeout(t1);const d1=await r1.json();
+    if(d1.ok&&d1.title) scriptResult=d1;
+  } catch {}
+
+  // Source 2: Open Library search directly from browser
+  if(!scriptResult){
+    setStatus("Trying Open Library for "+isbn+"...");
+    try{
+      const c2=new AbortController();const t2=setTimeout(()=>c2.abort(),FETCH_TIMEOUT_MS);
+      const r2=await fetch("https://openlibrary.org/search.json?isbn="+isbn+"&limit=1",{signal:c2.signal});
+      clearTimeout(t2);const d2=await r2.json();
+      if(d2.numFound>0&&d2.docs&&d2.docs[0]){
+        const doc=d2.docs[0];
+        const syn=doc.first_sentence?(typeof doc.first_sentence==="string"?doc.first_sentence:(doc.first_sentence.value||"")):"";
+        scriptResult={ok:true,title:doc.title||"Unknown Title",author:doc.author_name?doc.author_name[0]:"Unknown Author",
+          format:normalizeFormat(doc.physical_format_simple?doc.physical_format_simple[0]:""),synopsis:syn,
+          source:"Open Library",seriesName:"Unknown",seriesPosition:"?"};
+      }
+    } catch {}
+  }
+
+  // Source 3: Open Library ISBN endpoint
+  if(!scriptResult){
+    setStatus("Trying Open Library ISBN API for "+isbn+"...");
+    try{
+      const c3=new AbortController();const t3=setTimeout(()=>c3.abort(),FETCH_TIMEOUT_MS);
+      const r3=await fetch("https://openlibrary.org/isbn/"+isbn+".json",{signal:c3.signal});
+      clearTimeout(t3);
+      if(r3.ok){
+        const d3=await r3.json();
+        if(d3.title){
+          let author="Unknown Author";
+          if(d3.authors&&d3.authors[0]&&d3.authors[0].key){
+            try{const ar=await fetch("https://openlibrary.org"+d3.authors[0].key+".json");const ad=await ar.json();author=ad.name||ad.personal_name||"Unknown Author";}catch{}
+          }
+          scriptResult={ok:true,title:d3.title,author,format:normalizeFormat(d3.physical_format||""),
+            synopsis:(d3.description?(typeof d3.description==="string"?d3.description:(d3.description.value||"")):"").substring(0,300),
+            source:"Open Library ISBN",seriesName:"Unknown",seriesPosition:"?"};
+        }
+      }
+    } catch {}
+  }
+
+  if(!scriptResult) return null;
+
+  // Source 4: Browser-side Google Books by ISBN (no 403 from browser unlike server)
+  if(scriptResult.title && !scriptResult.synopsis){
+    setStatus("Fetching description from Google Books...");
+    try{
+      const c4=new AbortController();const t4=setTimeout(()=>c4.abort(),FETCH_TIMEOUT_MS);
+      const r4=await fetch("https://www.googleapis.com/books/v1/volumes?q=isbn:"+isbn+"&maxResults=1&printType=books",{signal:c4.signal});
+      clearTimeout(t4);
+      if(r4.ok){
+        const d4=await r4.json();
+        if(d4.totalItems>0&&d4.items&&d4.items[0]){
+          const info=d4.items[0].volumeInfo;
+          const desc=info.description||"";
+          // ISBN match is reliable so no author validation needed
+          if(desc.length>60) scriptResult.synopsis=desc.substring(0,1000);
+        }
+      }
+    } catch {}
+  }
+
+  // Source 5: Browser-side Google Books by title+author if ISBN search missed
+  // Validates author match before accepting to prevent wrong-book descriptions
+  if(scriptResult.title && !scriptResult.synopsis){
+    try{
+      const st=encodeURIComponent(scriptResult.title.replace(/[^a-zA-Z0-9 ]/g,"").trim());
+      const sa=encodeURIComponent(scriptResult.author.replace(/[^a-zA-Z0-9 ]/g,"").trim());
+      const c5=new AbortController();const t5=setTimeout(()=>c5.abort(),FETCH_TIMEOUT_MS);
+      const r5=await fetch("https://www.googleapis.com/books/v1/volumes?q=intitle:"+st+"+inauthor:"+sa+"&maxResults=1&printType=books",{signal:c5.signal});
+      clearTimeout(t5);
+      if(r5.ok){
+        const d5=await r5.json();
+        if(d5.totalItems>0&&d5.items&&d5.items[0]){
+          const info=d5.items[0].volumeInfo;
+          const desc=info.description||"";
+          // Validate: result author must share at least one word with expected author
+          const resultAuthors=((info.authors||[]).join(" ")).toLowerCase();
+          const expectedAuthorWords=scriptResult.author.toLowerCase().split(" ")
+            .filter(w=>w.length>2);
+          const authorMatch=expectedAuthorWords.some(w=>resultAuthors.indexOf(w)>=0);
+          if(desc.length>60&&authorMatch) scriptResult.synopsis=desc.substring(0,1000);
+        }
+      }
+    } catch {}
+  }
+
+  // Try to get format from GB if still missing
+  if (!scriptResult.format && scriptResult.title) {
+    try {
+      const fmtUrl = "https://www.googleapis.com/books/v1/volumes?q=isbn:"+isbn+"&maxResults=1&printType=books";
+      const fmtRes = await fetch(fmtUrl);
+      if (fmtRes.ok) {
+        const fmtData = await fmtRes.json();
+        if (fmtData.items && fmtData.items[0]) {
+          const vi = fmtData.items[0].volumeInfo;
+          // GB uses printType and isEbook
+          if (fmtData.items[0].saleInfo && fmtData.items[0].saleInfo.isEbook) scriptResult.format = "eBook";
+          else if (vi.printType === "BOOK") {
+            // Check binding from industryIdentifiers or title clues
+            const binding = (vi.dimensions ? vi.dimensions.height : "") || "";
+            scriptResult.format = ""; // leave for user to correct
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return {
+    isbn,
+    title:          scriptResult.title,
+    author:         scriptResult.author,
+    format:         normalizeFormat(scriptResult.format||""),
+    synopsis:       scriptResult.synopsis||"",
+    source:         scriptResult.source,
+    seriesName:     scriptResult.seriesName||"Unknown",
+    seriesPosition: scriptResult.seriesPosition||"?"
+  };
 }
 
-/* ================================================
-   SEND TO SHEET (form POST)
-================================================ */
+
 async function sendToSheet(data){
   return new Promise((resolve)=>{
     try{
@@ -944,14 +1268,23 @@ async function searchBooks(){
     const data=await fetchAllData();
     const filtered=data.filter(r=>(r.title||"").toLowerCase().includes(q)||(r.author||"").toLowerCase().includes(q));
     if(filtered.length===0){out.innerHTML="<div class='empty-msg'>No results for \""+q+"\".</div>";return;}
-    out.innerHTML=filtered.map(r=>
-      "<div class='result-item'>"+
-      "<div class='result-title'>"+(r.title||"—")+(r.format?" <span style='font-size:11px;color:var(--muted);'>("+r.format+")</span>":"")+"</div>"+
-      "<div class='result-author'>"+(r.author||"—")+"</div>"+
-      (r.synopsis?"<div class='result-synopsis'>"+r.synopsis.substring(0,140)+(r.synopsis.length>140?"…":"")+"</div>":"")+
-      "<span class='result-box'>📦 "+r.boxId+"</span>"+
-      "</div>"
-    ).join("");
+    out.innerHTML=filtered.map(r=>{
+      let sBadge="";
+      if(r.seriesName&&r.seriesName!=="Unknown"){
+        if(r.seriesName==="Stand-alone"){
+          sBadge="<span class='series-badge standalone' style='margin:3px 0;'><span class='series-pos standalone'>—</span>Stand-alone</span>";
+        }else{
+          sBadge="<span class='series-badge' style='margin:3px 0;'><span class='series-pos'>"+(r.seriesPosition||"?")+"</span>"+r.seriesName+"</span>";
+        }
+      }
+      return "<div class='result-item'>"+
+        "<div class='result-title'>"+(r.title||"—")+(r.format?" <span style='font-size:11px;color:var(--muted);'>("+r.format+")</span>":"")+"</div>"+
+        "<div class='result-author'>"+(r.author||"—")+"</div>"+
+        (sBadge?"<div>"+sBadge+"</div>":"")+
+        (r.synopsis?"<div class='result-synopsis'>"+r.synopsis.substring(0,140)+(r.synopsis.length>140?"…":"")+"</div>":"")+
+        "<span class='result-box'>📦 "+r.boxId+"</span>"+
+        "</div>";
+    }).join("");
   }catch{out.innerHTML="<div class='empty-msg' style='color:var(--danger);'>Search failed.</div>";}
 }
 
@@ -1169,7 +1502,9 @@ h1{font-size:22pt;color:#1a2e5a;margin-bottom:4px;}
         const author=b.author||"Unknown Author";
         const title=b.title||"Unknown Title";
         const fmt=b.format||"";
-        html+=`<div class="book-row"><div class="book-author">${author}</div><div class="book-title">${title}</div><div class="book-format">${fmt}</div></div>`;
+        let sLabel="";
+        if(b.seriesName&&b.seriesName!==""&&b.seriesName!=="Stand-alone"){sLabel=' <span style="font-size:9pt;color:#6b7592;">[#'+(b.seriesPosition||"?")+"]</span>";}
+        html+=`<div class="book-row"><div class="book-author">${author}</div><div class="book-title">${title}${sLabel}</div><div class="book-format">${fmt}</div></div>`;
       });
     }
     html+=`</div></div>`;
@@ -1203,6 +1538,273 @@ async function exportCSV(){
     const a=document.createElement("a");a.href=url;a.download="move-inventory-"+new Date().toISOString().split("T")[0]+".csv";a.click();URL.revokeObjectURL(url);
     showToast("CSV exported!");
   }catch{showToast("Export failed");}
+}
+
+/* ================================================
+   SERIES EDITOR
+================================================ */
+let seriesEditorIsbn = "";
+let seriesEditorBinId = "";
+
+function openSeriesEditor(isbn, seriesName, seriesPosition) {
+  seriesEditorIsbn  = isbn;
+  seriesEditorBinId = activeBox;
+  document.getElementById("seriesEditorName").value = decodeURIComponent(seriesName || "");
+  document.getElementById("seriesEditorPos").value  = decodeURIComponent(seriesPosition || "");
+  document.getElementById("seriesEditor").classList.add("open");
+  document.getElementById("seriesEditorName").focus();
+}
+
+function closeSeriesEditor() {
+  document.getElementById("seriesEditor").classList.remove("open");
+  seriesEditorIsbn  = "";
+  seriesEditorBinId = "";
+}
+
+async function saveSeriesEdit() {
+  const name = document.getElementById("seriesEditorName").value.trim();
+  const pos  = document.getElementById("seriesEditorPos").value.trim();
+  if (!name) { showToast("Enter a series name or Stand-alone"); return; }
+
+  try {
+    const result = await sendAction({
+      action:         "updateSeries",
+      isbn:           seriesEditorIsbn,
+      binId:          seriesEditorBinId,
+      seriesName:     name,
+      seriesPosition: pos || "?"
+    });
+    if (result.ok) {
+      showToast("✅ Series updated");
+      closeSeriesEditor();
+      // Update the badge on the last scanned card
+      const badge = document.getElementById("seriesBadge");
+      if (badge) {
+        if (name === "Stand-alone") {
+          badge.outerHTML = "<div id='seriesBadge'><span class='series-badge standalone'><span class='series-pos standalone'>—</span>Stand-alone</span></div>";
+        } else {
+          badge.outerHTML = "<div id='seriesBadge'><span class='series-badge'><span class='series-pos'>"+(pos||"?")+"</span>"+name+"</span></div>";
+        }
+      }
+      // Update recent scans
+      const rec = recentScans.find(r => r.isbn === seriesEditorIsbn);
+      if (rec) { rec.seriesName = name; rec.seriesPosition = pos; renderRecent(); }
+    } else {
+      showToast("Update failed: " + (result.error || "unknown"));
+    }
+  } catch(e) {
+    showToast("Update failed");
+  }
+}
+
+/* ================================================
+   SERIES COMPLETENESS
+================================================ */
+let seriesTabMode = "all";
+let seriesDataCache = null;
+
+function setSeriesTab(mode) {
+  seriesTabMode = mode;
+  ["all","gaps","standalone"].forEach(t => {
+    const el = document.getElementById("tab" + t.charAt(0).toUpperCase() + t.slice(1));
+    if(el) el.className = "series-tab" + (t===mode ? " active" : "");
+  });
+  if(seriesDataCache) renderSeriesData(seriesDataCache);
+}
+
+async function loadSeriesData() {
+  const out = document.getElementById("seriesContent");
+  out.innerHTML = "<div class='empty-msg'>Loading series data...</div>";
+  try {
+    const data = await fetchAllData();
+    seriesDataCache = data;
+    renderSeriesData(data);
+  } catch(e) {
+    out.innerHTML = "<div class='empty-msg' style='color:var(--danger);'>Failed to load.</div>";
+  }
+}
+
+function renderSeriesData(data) {
+  const out = document.getElementById("seriesContent");
+
+  // Group by series name
+  const seriesMap = {};
+  const standalone = [];
+
+  data.forEach(r => {
+    const sn = r.seriesName || "Unknown";
+    const sp = r.seriesPosition || "?";
+
+    if (!sn || sn === "Unknown") return; // skip unknown
+
+    if (sn === "Stand-alone") {
+      standalone.push(r);
+      return;
+    }
+
+    if (!seriesMap[sn]) seriesMap[sn] = [];
+    seriesMap[sn].push(r);
+  });
+
+  // Build series entries with gap analysis
+  const seriesEntries = Object.entries(seriesMap).map(([name, books]) => {
+    // Get numeric positions
+    const positions = books.map(b => {
+      const p = parseInt(b.seriesPosition);
+      return isNaN(p) ? null : p;
+    }).filter(p => p !== null).sort((a,b)=>a-b);
+
+    const maxPos = positions.length > 0 ? Math.max(...positions) : 0;
+    const minPos = positions.length > 0 ? Math.min(...positions) : 0;
+    const gaps   = [];
+    for (let i = minPos; i <= maxPos; i++) {
+      if (!positions.includes(i)) gaps.push(i);
+    }
+
+    return { name, books, positions, gaps, hasGaps: gaps.length > 0 };
+  }).sort((a,b) => a.name.localeCompare(b.name));
+
+  // Filter by tab
+  let filtered = seriesEntries;
+  if (seriesTabMode === "gaps")       filtered = seriesEntries.filter(e => e.hasGaps);
+  if (seriesTabMode === "standalone") {
+    // Show standalone books
+    if (standalone.length === 0) {
+      out.innerHTML = "<div class='empty-msg'>No stand-alone books found.</div>";
+      return;
+    }
+    out.innerHTML = standalone.map(r =>
+      "<div class='box-stat-row'>" +
+        "<div><div style='font-weight:600;font-size:13px;'>" + r.title + "</div>" +
+        "<div style='font-size:12px;color:var(--muted);'>" + r.author + " · 📦 " + r.boxId + "</div></div>" +
+      "</div>"
+    ).join("");
+    return;
+  }
+
+  if (filtered.length === 0) {
+    out.innerHTML = "<div class='empty-msg'>No " + (seriesTabMode==="gaps"?"series with gaps":"series") + " found.</div>";
+    return;
+  }
+
+  // Summary line
+  const totalSeries    = seriesEntries.length;
+  const seriesWithGaps = seriesEntries.filter(e=>e.hasGaps).length;
+  let summaryHtml = "<div style='font-size:12px;color:var(--muted);margin-bottom:12px;font-family:var(--mono);'>" +
+    totalSeries + " series · " + seriesWithGaps + " with gaps · " + standalone.length + " stand-alone</div>";
+
+  out.innerHTML = summaryHtml + filtered.map(entry => {
+    const { name, books, positions, gaps } = entry;
+    const maxPos = positions.length > 0 ? Math.max(...positions) : 0;
+    const minPos = positions.length > 0 ? Math.min(...positions) : 0;
+
+    // Build volume rows — have and missing
+    let volRows = "";
+
+    // All positions we know about (have + gaps)
+    const allPositions = [];
+    for(let i = minPos; i <= maxPos; i++) allPositions.push(i);
+
+    allPositions.forEach(pos => {
+      const book = books.find(b => parseInt(b.seriesPosition) === pos);
+      if (book) {
+        volRows += "<div class='series-vol-row'>" +
+          "<div class='series-vol-num have'>" + pos + "</div>" +
+          "<div class='series-vol-info'>" +
+            "<div class='series-vol-title'>" + book.title + "</div>" +
+            "<div class='series-vol-author'>" + book.author + "</div>" +
+            "<div class='series-vol-box'>📦 " + book.boxId + " · " + (book.format||"—") + "</div>" +
+          "</div></div>";
+      } else {
+        volRows += "<div class='series-vol-row'>" +
+          "<div class='series-vol-num missing'>" + pos + "</div>" +
+          "<div class='series-vol-info'>" +
+            "<div class='series-gap-label'>Missing — not in inventory</div>" +
+          "</div></div>";
+      }
+    });
+
+    // Books with unknown position
+    const unknownPos = books.filter(b => isNaN(parseInt(b.seriesPosition)));
+    unknownPos.forEach(book => {
+      volRows += "<div class='series-vol-row'>" +
+        "<div class='series-vol-num have' style='font-size:9px;'>?</div>" +
+        "<div class='series-vol-info'>" +
+          "<div class='series-vol-title'>" + book.title + "</div>" +
+          "<div class='series-vol-author'>" + book.author + "</div>" +
+          "<div class='series-vol-box'>📦 " + book.boxId + " · position unknown</div>" +
+        "</div></div>";
+    });
+
+    const gapLabel = gaps.length > 0
+      ? "<span style='color:var(--danger);font-size:11px;'>⚠ Missing: " + gaps.join(", ") + "</span>"
+      : "<span style='color:var(--success);font-size:11px;'>✓ Complete</span>";
+
+    return "<div class='series-group'>" +
+      "<div class='series-group-header' onclick='this.nextElementSibling.style.display=this.nextElementSibling.style.display==="none"?"":"none"'>" +
+        "<div>" +
+          "<div class='series-group-title'>" + name + "</div>" +
+          "<div class='series-group-meta'>" + books.length + " book" + (books.length!==1?"s":"") +
+            (maxPos > 0 ? " · Vol " + minPos + "–" + maxPos : "") + "</div>" +
+        "</div>" +
+        "<div style='text-align:right;'>" + gapLabel + "</div>" +
+      "</div>" +
+      "<div class='series-volumes' style='display:none;'>" + volRows + "</div>" +
+    "</div>";
+  }).join("");
+}
+
+/* ================================================
+   SERIES EDITOR
+================================================ */
+let seriesEditorIsbn = "";
+
+function openSeriesEditor(isbn) {
+  seriesEditorIsbn = isbn;
+  // Pre-fill from recent scans
+  const rec = recentScans.find(r => r.isbn === isbn);
+  document.getElementById("seriesModalTitle").textContent =
+    rec ? "Series: " + rec.title.substring(0, 30) : "Edit Series";
+  document.getElementById("seriesIsbn").value       = isbn;
+  document.getElementById("seriesNameInput").value  = rec ? (rec.seriesName || "") : "";
+  document.getElementById("seriesPosInput").value   = rec ? (rec.seriesPosition || "") : "";
+  document.getElementById("seriesModal").style.display = "flex";
+  setTimeout(() => document.getElementById("seriesNameInput").focus(), 100);
+}
+
+function closeSeriesEditor() {
+  document.getElementById("seriesModal").style.display = "none";
+  seriesEditorIsbn = "";
+}
+
+async function saveSeriesOverride() {
+  const isbn = document.getElementById("seriesIsbn").value;
+  const name = document.getElementById("seriesNameInput").value.trim();
+  const pos  = document.getElementById("seriesPosInput").value.trim();
+  if (!name) { showToast("Enter a series name or Stand-alone"); return; }
+
+  try {
+    const result = await sendAction({
+      action:         "setSeriesOverride",
+      isbn,
+      binId:          activeBox,
+      seriesName:     name,
+      seriesPosition: pos || "?"
+    });
+    if (result.ok) {
+      // Update recent scans
+      recentScans.forEach(r => {
+        if (r.isbn === isbn) { r.seriesName = name; r.seriesPosition = pos; }
+      });
+      renderRecent();
+      showToast("📖 Series updated!");
+      closeSeriesEditor();
+    } else {
+      showToast("Update failed: " + (result.error || "unknown"));
+    }
+  } catch(e) {
+    showToast("Update failed");
+  }
 }
 
 /* ================================================
@@ -1246,6 +1848,10 @@ function pause(ms){return new Promise(r=>setTimeout(r,ms));}
 ================================================ */
 document.addEventListener("DOMContentLoaded",()=>{
   loadTheme();loadSettings();loadQRLists();
+  // Lock screen orientation to portrait
+  if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock("portrait").catch(()=>{});
+  }
 
   const keyMap={
     "manualIsbn":()=>submitManualIsbn(),
@@ -1253,11 +1859,16 @@ document.addEventListener("DOMContentLoaded",()=>{
     "searchInput":()=>searchBooks(),
     "titleSearchInput":()=>searchByTitle(),
     "addItemInput":()=>confirmAddItem(),
+    "seriesEditorName":()=>document.getElementById("seriesEditorPos").focus(),
+    "seriesEditorPos":()=>saveSeriesEdit(),
   };
   Object.entries(keyMap).forEach(([id,fn])=>{
     const el=document.getElementById(id);if(el)el.addEventListener("keydown",e=>{if(e.key==="Enter")fn();});
   });
   document.getElementById("manualTitle").addEventListener("keydown",e=>{if(e.key==="Enter")document.getElementById("manualAuthor").focus();});
+  document.getElementById("seriesNameInput").addEventListener("keydown",e=>{if(e.key==="Enter")document.getElementById("seriesPosInput").focus();});
+  document.getElementById("seriesPosInput").addEventListener("keydown",e=>{if(e.key==="Enter")saveSeriesOverride();});
+  document.getElementById("seriesModal").addEventListener("click",e=>{if(e.target===document.getElementById("seriesModal"))closeSeriesEditor();});
   document.getElementById("manualAuthor").addEventListener("keydown",e=>{if(e.key==="Enter")submitManualEntry();});
   document.getElementById("settingsPanel").addEventListener("click",e=>{if(e.target===document.getElementById("settingsPanel"))closeSettings();});
 });
